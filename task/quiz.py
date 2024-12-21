@@ -157,7 +157,7 @@ def __submit(driver,course_name,ans_rate):
         except:
             print(color.yellow('未查询到本次测试成绩'))
     else:
-        print(color.yellow('3秒后存'))
+        print(color.yellow('3秒后保存'))
         time.sleep(3)
         driver.find_element(By.XPATH,'//*[@id="RightCon"]/div[2]/div/div[3]/a[1]').click()
 
