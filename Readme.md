@@ -29,7 +29,7 @@
   2.如果不刷题：
       1.直接点击启动程序即可开始刷课。
 4. 教程
-   [刷课教程](【学习通shua_ke的python学习】https://www.bilibili.com/video/BV15tktY2EGe?vd_source=4f7c4639ddfd043eb4c8f26c738222d2)
+   [刷课教程](https://www.bilibili.com/video/BV15tktY2EGe?vd_source=4f7c4639ddfd043eb4c8f26c738222d2)
 # 四、功能介绍
   1.刷课功能：根据用户输入的课程名称，自动在学习通平台上执行刷课相关操作，模拟用户观看课程的行为。
   2.刷题功能（仅选择题和判断题）：在用户选择刷题并且成功扫码登录（如果需要）后，会尝试对课程中的选择题和判断题进行作答，但答案不保证完全正确。
