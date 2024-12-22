@@ -7,11 +7,12 @@
           1.如果使用pip，可以通过pip install selenium命令安装。
       2.pyautogui安装：
           1.使用pip install pyautogui进行安装。
+   '''pip install selenium'''
       3.tkinter：
           1.在大多数Python安装中，tkinter是自带的，如果没有，可以根据操作系统进行相应安装。
-2. 谷歌驱动（ChromeDriver）
+3. 谷歌驱动（ChromeDriver）
   1.需要自行下载与你使用的谷歌浏览器版本一致的谷歌驱动（ChromeDriver）。下载地址：ChromeDriver官方下载页面。
-3. 搜题插件
+4. 搜题插件
   1.搜题插件已经包含在源代码文件中，文件后缀为.crx。
 # 三、使用示例
 1. 运行脚本
