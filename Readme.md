@@ -7,7 +7,6 @@
           1.如果使用pip，可以通过pip install selenium命令安装。
       2.pyautogui安装：
           1.使用pip install pyautogui进行安装。
-   '''pip install selenium'''
       3.tkinter：
           1.在大多数Python安装中，tkinter是自带的，如果没有，可以根据操作系统进行相应安装。
 3. 谷歌驱动（ChromeDriver）
