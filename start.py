@@ -57,7 +57,7 @@ class Start:
         menu_bar.add_command(label='   主页   ',command=self.show_main,font= ("Helvetica", 12))
         menu_bar.add_command(label='  刷课日志  ', command=self.show_vido)
         menu_bar.add_command(label='  测试成绩  ', command=self.show_score)
-        menu_bar.add_command(label='  错误日志  ', command=self.show_error)
+        menu_bar.add_command(label='  报错日志  ', command=self.show_error)
         menu_bar.add_command(label=' 设置 ', command=self.show_set)
         menu_bar.add_command(label=' 帮助 ', command=self.show_help)
 
@@ -258,7 +258,8 @@ class Start:
                 self.error_text.delete('1.0', tk.END)
                 self.error_text.insert(tk.END, content)
         except FileNotFoundError:
-            pass
+            self.error_text.delete('1.0', tk.END)
+            self.error_text.insert(tk.END, '暂无报错记录')
         self.error_frame.grid()
         self.score_frame.grid_forget()
         self.main_frame.grid_forget()
