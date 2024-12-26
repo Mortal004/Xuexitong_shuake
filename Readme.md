@@ -2,13 +2,15 @@
 这个脚本旨在帮助用户在学习通平台上自动刷课和刷题（仅选择题和判断题且答案准确性不保证）。它主要利用selenium库进行网页自动化操作，pyautogui库辅助一些鼠标和键盘操作，tkinter库创建可视化的设置窗口。
 # 二、安装指南
 1. 依赖库安装
-  1.确保已经安装了selenium、pyautogui和tkinter库。
+  1.确保已经安装了selenium、pyautogui、tkinter库、colorama库。
       1.对于selenium：
           1.如果使用pip，可以通过pip install selenium命令安装。
       2.pyautogui安装：
           1.使用pip install pyautogui进行安装。
       3.tkinter：
           1.在大多数Python安装中，tkinter是自带的，如果没有，可以根据操作系统进行相应安装。
+     4.colorama库：
+         使用pip install coolorama进行安装
 3. 谷歌驱动（ChromeDriver）
   1.需要自行下载与你使用的谷歌浏览器版本一致的谷歌驱动（ChromeDriver）。下载地址：ChromeDriver官方下载页面。
 4. 搜题插件
