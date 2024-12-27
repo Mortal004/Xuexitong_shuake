@@ -44,7 +44,7 @@ class DecodeSecret:
                     fontFaceStr = re.findall(";base64,(.*)'[)] format", strData)[0]
                     break
                 except Exception as e:
-                    print("当前 fontFace 无法解析："+str(e))
+                    print("当前 fontFace 无法解析："+str(e),flush=True)
                     continue
         if self._statusCode == 1:
             if fontFaceStr == "":

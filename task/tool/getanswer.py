@@ -1,4 +1,6 @@
+import io
 import re
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 import pyautogui
@@ -7,6 +9,8 @@ from selenium.webdriver.common.by import By
 from task.tool import color
 
 
+# 修改 stdout 编码为 UTF-8
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 # 自定义文件
 class NoFoundAnswerException(Exception):
     """
@@ -163,7 +167,7 @@ class GetAnswer:
                 answer_options_dicts_lst.append(answer_options_dict)
                 break
             except:
-                print(color.yellow('搜题失败1，请重新搜题，3秒后检测'))
+                print(color.yellow('搜题失败1，请重新搜题，3秒后检测'),flush=True)
                 time.sleep(3)
                 continue
 
@@ -177,7 +181,7 @@ class GetAnswer:
 
                 break
             except:
-                print(color.yellow('搜题失败2，请重新搜题，3秒后检测'))
+                print(color.yellow('搜题失败2，请重新搜题，3秒后检测'),flush=True)
                 time.sleep(3)
                 continue
 
@@ -191,7 +195,7 @@ class GetAnswer:
 
                 break
             except:
-                print(color.yellow('搜题失败3，请重新搜题，3秒后检测'))
+                print(color.yellow('搜题失败3，请重新搜题，3秒后检测'),flush=True)
                 time.sleep(3)
                 continue
         return answerList,answer_options_dicts_lst
@@ -242,18 +246,18 @@ class GetAnswer:
         :param questionType: 题目的类型，若不提供题目类型则不检测查找答案正确性
         :return: 形如[[答案1], [答案2], [答案3]]的二维列表，其中列表的元素个数在[0, 5]范围内
         """
-        print("正在搜索题目：{}\n".format(question))
+        print("正在搜索题目：{}\n".format(question),flush=True)
         answerList ,answer_options_dicts_lst= self.__requestAnswer( questionType,driver)
         # while None in answerList:
         #     answerList.remove(None)
         if not answerList:
-            print(color.yellow('未找到答案'))
+            print(color.yellow('未找到答案'),flush=True)
             return
             # GetAnswer.callback(question, str(answerList[0]), questionType)
         else:
-            print(color.green("找到 " + str(len(answerList)) + " 个答案"))
+            print(color.green("找到 " + str(len(answerList)) + " 个答案"),flush=True)
             for i in range(len(answerList)):
-                print(color.green("答案{}：{}".format(i + 1, answerList[i])))
+                print(color.green("答案{}：{}".format(i + 1, answerList[i])),flush=True)
             return answerList,answer_options_dicts_lst
 
 
@@ -264,7 +268,7 @@ if __name__ == "__main__":
         q = input("输入题目（q退出）：")
         if q == "q":
             break
-        answerList = getAnswer.getAnswer(q)
+        answerList = getAnswer.getAnswer()
         print(color.green(answerList))
         print()
 

@@ -4,8 +4,8 @@ import traceback
 
 def send_error(txt):
     # 配置日志记录
-    logging.basicConfig(level=logging.ERROR, filename='error.log', filemode='a',
-                        format='%(asctime)s - %(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.ERROR, filename='error.log', filemode='w',
+                        format='%(asctime)s - %(levelname)s: %(message)s',encoding='utf-8')
     logging.error(txt)
 
 

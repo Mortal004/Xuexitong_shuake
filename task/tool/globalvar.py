@@ -49,7 +49,7 @@ errorPrinter = getPrinterBySetter(errorPrinterSetter)
 splitSetter = SplitSetter("myDividerCfg")
 splitSetter.symbol = "="
 splitSetter.color = "green"
-splitSetter.length = 20
+splitSetter.length = 28
 splitSetter.message = ":I am the dividing line:"
 splitSetter.leftmostSymbol = "<"
 splitSetter.rightmostSymbol = ">"

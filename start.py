@@ -1,12 +1,14 @@
 import json
+import os
+import signal
 from datetime import datetime
 import re
 import threading
 import tkinter as tk
 import subprocess
 from colorama import Fore
-import psutil
 from tkinter import ttk, font, messagebox, filedialog
+
 
 
 class Start:
@@ -67,7 +69,7 @@ class Start:
         # self.button1.config(image=self.img)
         self.button1.grid(row=0, column=0)
         # 创建按钮2
-        self.button2 = tk.Button(self.main_frame, text="退出",command=self.close,font=self.font)
+        self.button2 = tk.Button(self.main_frame, text="关闭程序",command=self.close,font=self.font)
         self.button2.grid(row=0, column=1)
         # 配置按钮框架的列权重，使按钮居中
         self.main_frame.columnconfigure((0,1), weight=1)
@@ -195,6 +197,14 @@ class Start:
         self.set_frame.rowconfigure(3,weight=1)
         self.frame_set_frame.rowconfigure(3,weight=1)
 
+        #帮助页面
+        with open('Help.txt', 'r', encoding='utf-8') as f:
+            self.text = f.read()
+        self.help_txt = tk.Text(self.help_frame,height=27,width=60,font=self.font)
+        self.help_txt.grid()
+        self.help_txt.insert(tk.END, self.text)
+        self.help_txt.config(state=tk.DISABLED)
+
         # 当前时间显示
         self.time_label = tk.Label(self.root,text="")
         self.time_label.grid(row=0, column=0, columnspan=2, padx=10, pady=1, sticky=tk.W)
@@ -215,6 +225,7 @@ class Start:
         self.score_frame.grid_forget()
         self.vido_frame.grid_forget()
         self.set_frame.grid_forget()
+        self.help_frame.grid_forget()
 
     def show_vido(self):
         self.vido_text.config(state=tk.NORMAL)
@@ -232,6 +243,7 @@ class Start:
         self.main_frame.grid_forget()
         self.vido_text.config(state=tk.DISABLED)
         self.set_frame.grid_forget()
+        self.help_frame.grid_forget()
 
     def show_score(self):
         self.score_txt.config(state=tk.NORMAL)
@@ -249,11 +261,12 @@ class Start:
         self.vido_frame.grid_forget()
         self.score_txt.config(state=tk.DISABLED)
         self.set_frame.grid_forget()
+        self.help_frame.grid_forget()
 
     def show_error(self):
         try:
             self.error_text.config(state=tk.NORMAL)
-            with open('error.log', 'r') as f:
+            with open('error.log', 'r',encoding='utf-8') as f:
                 content = f.read()
                 self.error_text.delete('1.0', tk.END)
                 self.error_text.insert(tk.END, content)
@@ -266,6 +279,7 @@ class Start:
         self.vido_frame.grid_forget()
         self.error_text.config(state=tk.DISABLED)
         self.set_frame.grid_forget()
+        self.help_frame.grid_forget()
 
     def show_set(self):
         self.set_frame.grid()
@@ -273,6 +287,7 @@ class Start:
         self.score_frame.grid_forget()
         self.main_frame.grid_forget()
         self.vido_frame.grid_forget()
+        self.help_frame.grid_forget()
 
     def select_file1(self):
         file_path = filedialog.askopenfilename(title="选择文件", filetypes=[("", "*.exe")])
@@ -287,7 +302,12 @@ class Start:
             self.extension_entry.insert(tk.END,file_path)
 
     def show_help(self):
-        pass
+        self.help_frame.grid()
+        self.set_frame.grid_forget()
+        self.error_frame.grid_forget()
+        self.score_frame.grid_forget()
+        self.main_frame.grid_forget()
+        self.vido_frame.grid_forget()
 
     def run_program(self):
         """
@@ -302,7 +322,7 @@ class Start:
             读取 main.py 程序的输出，并将其显示在文本框中。
             """
             # 启动 main.py 程序
-            self.process = subprocess.Popen(['python', 'main.py'],
+            self.process = subprocess.Popen(['Main.exe'],
                                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             color_tag = None
             while True:
@@ -356,19 +376,21 @@ class Start:
         self.thread = threading.Thread(target=read_output)
         self.thread.start()
 
-    def close(self):
-        if self.process is not None:
-            self.process.terminate()
-            self.process.wait()
-            self.process = None
 
-            # 获取当前进程ID
-            # main_process_id = os.get_pid()
-            # 遍历所有进程，查找并终止与主进程相关的子进程
-            for proc in psutil.process_iter():
-                if proc.name() == 'start.py' in proc.cmdline():
-                    proc.terminate()
-        self.root.destroy()
+    def close(self):
+
+        if self.process is not None:
+            try:
+                if os.name == 'nt':  # Windows 平台
+                    subprocess.run(['taskkill', '/F', '/T', '/PID', str(self.process.pid)])
+                else:  # Unix 平台
+                    os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+                self.text_box.insert(tk.END, "程序已成功关闭\n")
+            except Exception as e:
+                self.text_box.insert(tk.END, f"关闭失败: {e}\n")
+            finally:
+                process = None
+
 
     # 每秒更新 GUI 中的时间显示
     def update_time(self):
@@ -473,9 +495,12 @@ class Start:
                 self.question_entry.insert(0, self.account_info['choice'])
                 self.chrome_driver_entry.insert(0,self.account_info['driver_path'])
                 self.extension_entry.insert(0,self.account_info['extension_path'])
-                self.font_entry.insert(0, self.account_info['font_type'])
-                self.size_entry.insert(0,self.account_info['font_size'])
-                self.change_font()
+                try:
+                    self.font_entry.insert(0, self.account_info['font_type'])
+                    self.size_entry.insert(0,self.account_info['font_size'])
+                    self.change_font()
+                except:
+                    pass
         except FileNotFoundError:
             pass
 
@@ -483,3 +508,4 @@ class Start:
 if __name__ == "__main__":
     client = Start()
     client.root.mainloop()
+
