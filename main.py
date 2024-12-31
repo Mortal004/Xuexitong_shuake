@@ -44,20 +44,28 @@ def login_study(driver,phone_number,password):
     # 点击登录
     login_button = driver.find_element(By.ID, 'loginBtn')
     login_button.click()
-
     time.sleep(3)
     # 转到页面内窗口
-    driver.switch_to.frame('frame_content')
+    #点击课程
+    try:
+        driver.find_element(By.CSS_SELECTOR,'[title="课程"]').click()
+        time.sleep(2)
+    except:
+        pass
+    try:
+        driver.switch_to.frame('frame_content')
+        # 选择‘我的课程’并点击
+        element=driver.find_element(By.CLASS_NAME,'course-tab')
+        elements=element.find_elements(By.TAG_NAME,'div')
+        for element in elements:
+            if element.text=='我学的课':
+                element.click()
+                break
+        element.click()
+        time.sleep(3)
+    except:
+        pass
 
-    # 选择‘我的课程’并点击
-    element=driver.find_element(By.CLASS_NAME,'course-tab')
-    elements=element.find_elements(By.TAG_NAME,'div')
-    for element in elements:
-        if element.text=='我学的课':
-            element.click()
-            break
-    element.click()
-    time.sleep(3)
 
 def choice_course(driver, course_name):
     """
@@ -71,7 +79,10 @@ def choice_course(driver, course_name):
     无
     """
     # 查找所有课程名称元素
+
     course_elements = driver.find_elements(By.CLASS_NAME, 'course-name')
+    if len(course_elements)==0:
+        course_elements = driver.find_elements(By.CLASS_NAME, 'courseName')
 
     # 遍历所有课程元素
     for course_element in course_elements:
@@ -81,12 +92,12 @@ def choice_course(driver, course_name):
             driver.execute_script("arguments[0].scrollIntoView();", course_element)
 
             # 等待课程名称元素变为可点击状态
-            try:
-                WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, 'course-name')))
-            except TimeoutException:
-                print(color.red("等待课程名称元素可点击超时"),flush=True)
-                continue
-
+            # try:
+            #     WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, 'course-name')))
+            # except TimeoutException:
+            #     print(color.red("等待课程名称元素可点击超时"),flush=True)
+            #     continue
+            #
             # 使用 JavaScript 点击课程名称元素
             driver.execute_script("arguments[0].click();", course_element)
 
@@ -269,6 +280,8 @@ def run(driver,choice,course_name):
                     except Exception as e:
                         error_msg = traceback.format_exc()
                         send_error(error_msg)
+                        print(color.yellow('出错了，具体原因请前往错误日志查看，请自行保存或提交,10秒后继续'), flush=True)
+                        time.sleep(10)
                 elif choice=='否':
                     print(color.yellow('跳过测试题'),flush=True)
         driver.switch_to.default_content()
@@ -336,7 +349,7 @@ if __name__ == '__main__':
             except NoSuchDriverException as e:
                 print(color.red('无法正常打开谷歌驱动，请检查地址是否正确，或检查版本是否与谷歌浏览器一致'),flush=True)
             except WebDriverException as e:
-                if 'ERR_INTERNET_DISCONNECTED' in str(e):
+                if 'ERR_INTERNET_DISCONNECTED' in str(e) or 'ERR_NAME_NOT_RESOLVED' in str(e):
                     print(color.red('你网都没连，刷个屁的课啊'),flush=True)
                 else:
                     print(color.red('出错了，具体原因请前往错误日志查看'),flush=True)

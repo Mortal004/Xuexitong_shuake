@@ -5,6 +5,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 import pyautogui
 from selenium.webdriver.common.by import By
+from win32trace import flush
 
 from task.tool import color
 
@@ -67,11 +68,18 @@ class GetAnswer:
     @staticmethod
     def extension_answer2(driver):
         driver.switch_to.default_content()
-        host = driver.find_element(By.TAG_NAME, 'plasmo-csui')
         # 找到Shadow DOM的宿主标签
         host = driver.find_element(By.TAG_NAME, 'plasmo-csui')
-        result_2 = pyautogui.locateOnScreen(r'task\img\img_02.png', confidence=0.8)
-        pyautogui.click(result_2)
+        # 2. 访问 Shadow DOM
+        answer2 = driver.execute_script(
+            """
+            var elementInsideShadow = arguments[0].shadowRoot.querySelector("#plasmo-overlay-0 > div > div.result-wrapper.show > div.skeleton-wrapper > div.tab > div > div:nth-child(2)");
+            return elementInsideShadow;
+            """, host
+        )
+        answer2.click()
+        # result_2 = pyautogui.locateOnScreen(r'task\img\img_02.png', confidence=0.8)
+        # pyautogui.click(result_2)
         time.sleep(1)
         answer_text = driver.execute_script(
             """
@@ -109,11 +117,17 @@ class GetAnswer:
     @staticmethod
     def extension_answer3(driver):
         driver.switch_to.default_content()
-        host = driver.find_element(By.TAG_NAME, 'plasmo-csui')
         # 找到Shadow DOM的宿主标签
         host = driver.find_element(By.TAG_NAME, 'plasmo-csui')
-        result_3 = pyautogui.locateOnScreen(r'task\img\img_03.png', confidence=0.9)
-        pyautogui.click(result_3)
+        answer3 = driver.execute_script(
+            """
+            var elementInsideShadow = arguments[0].shadowRoot.querySelector("#plasmo-overlay-0 > div > div.result-wrapper.show > div.skeleton-wrapper > div.tab > div > div:nth-child(3)");
+            return elementInsideShadow;
+            """, host
+        )
+        answer3.click()
+        # result_3 = pyautogui.locateOnScreen(r'task\img\img_03.png', confidence=0.9)
+        # pyautogui.click(result_3)
         time.sleep(1)
         answer_text = driver.execute_script(
             """
@@ -137,7 +151,13 @@ class GetAnswer:
 
         # 为字典键添加":"及后续空格
         formatted_dict = {v: f"{k}" for k, v in choices_dict.items()}
-
+        close = driver.execute_script(
+            """
+            var elementInsideShadow = arguments[0].shadowRoot.querySelector("#plasmo-overlay-0 > div > div.result-wrapper.show > div.result-header > div.result-close");
+            return elementInsideShadow;
+            """, host
+        )
+        close.click()
         try:
             answer = answer_text[answer_text.find("】") + 1:]
             # print(f'answer: {answer}')
@@ -160,25 +180,22 @@ class GetAnswer:
 
         while True:
             try:
-
                 answer0,answer_options_dict=GetAnswer.extension_answer1(driver)
                 answer1=GetAnswer.__parseAnswer(answer0,questionType)
                 answerList.append(answer1)
                 answer_options_dicts_lst.append(answer_options_dict)
                 break
             except:
-                print(color.yellow('搜题失败1，请重新搜题，3秒后检测'),flush=True)
+                print(color.yellow('请先扫码，然后再点击右上角的剪刀图标，再手动拉框第一个题目'),flush=True)
                 time.sleep(3)
                 continue
 
         while True:
             try:
-
                 answer0 ,answer_options_dict= GetAnswer.extension_answer2(driver)
                 answer2 = GetAnswer.__parseAnswer(answer0, questionType)
                 answerList.append(answer2)
                 answer_options_dicts_lst.append(answer_options_dict)
-
                 break
             except:
                 print(color.yellow('搜题失败2，请重新搜题，3秒后检测'),flush=True)
@@ -187,12 +204,10 @@ class GetAnswer:
 
         while True:
             try:
-
                 answer0 ,answer_options_dict= GetAnswer.extension_answer3(driver)
                 answer3 = GetAnswer.__parseAnswer(answer0, questionType)
                 answerList.append(answer3)
                 answer_options_dicts_lst.append(answer_options_dict)
-
                 break
             except:
                 print(color.yellow('搜题失败3，请重新搜题，3秒后检测'),flush=True)

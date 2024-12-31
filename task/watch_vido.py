@@ -1,4 +1,7 @@
 import time
+
+from setuptools.command.setopt import option_base
+
 from task.tool import color
 import pyautogui
 from selenium.webdriver import ActionChains
@@ -28,34 +31,52 @@ def speed():# 待完善，功能：拖动进度条到视频结尾
         except:
             print(color.yellow("未匹配到进度条"),flush=True)
 
-def vido_question(condition):# 要用时直接复制粘贴，不要调用
-    try:
-        img_Ture = pyautogui.locateOnScreen(r'.\img\img_Ture.png', confidence=0.9)
-        img_False = pyautogui.locateOnScreen(r'.\img\img_False.png', confidence=0.9)
-        img_submit = pyautogui.locateOnScreen(r'.\img\img_submit.png', confidence=0.8)
-
-        print(color.green('已检测到视频中有题目'),flush=True)
-        # answerWebElementList = element.find_elements(By.TAG_NAME, "li")
-        if condition:
-            # __questionList.append(answerWebElementList[0])
+def vido_question():
+    i=1
+    while i<3:
+        try:
+            img_Ture = pyautogui.locateOnScreen(r'task\img\img_Ture.png', confidence=0.9)
+            img_False = pyautogui.locateOnScreen(r'task\img\img_False.png', confidence=0.9)
+            img_submit = pyautogui.locateOnScreen(r'task\img\img_submit.png', confidence=0.8)
+        except pyautogui.ImageNotFoundException:
+            return
+        if i==1:
+            print(color.green('已检测到视频中有题目'),flush=True)
             pyautogui.click(img_Ture, duration=0.4)
-            condition = False
             print(color.green('第一次答题完毕'),flush=True)
-        else:
-            # __questionList.append(answerWebElementList[1])
+        elif i==2:
             pyautogui.click(img_False, duration=0.4)
             print(color.green('第二次答题完毕'),flush=True)
-            condition = True
-
         # 提交
-        # driver.find_element(By.XPATH,'//*[@id="videoquiz-submit"]').click()
         pyautogui.click(img_submit, duration=0.4)
         pyautogui.move(0, -50)
         time.sleep(2)
-        # continue
-    except:
-        condition = True
-        return
+        i+=1
+
+def video_question1(i,driver):
+    driver.switch_to.default_content()
+    driver.switch_to.frame('iframe')
+    element = driver.find_elements(By.CSS_SELECTOR, '[class="ans-attach-online ans-insertvideo-online"]')
+    driver.switch_to.frame(element[i])
+    k=0
+    while k<4:
+        try:
+            element=driver.find_element(By.CLASS_NAME,'tkTopic')
+            print(color.yellow('已检测到视频中有题目'), flush=True)
+            # title_type=element.find_element(By.CLASS_NAME,'tkTopic_title').text
+            options=element.find_element(By.CLASS_NAME,'tkItem_ul')
+            options=options.find_elements(By.TAG_NAME,'li')
+            if len(options)==2 :
+                options[k].click()
+                k+=1
+            elif len(options)==4:
+                options[k].click()
+                k+=1
+            #提交
+            submit=element.find_element(By.ID,'videoquiz-submit')
+            submit.click()
+        except:
+            break
 
 def study_page(driver,course_name):
     cond=False
@@ -122,11 +143,10 @@ def study_page(driver,course_name):
             print(color.yellow('请不要将鼠标移动至谷歌窗口外，或将窗口最小化，这都有可能导致视频暂停，现在鼠标左右移动是正常的，目的是为了防止熄屏'),flush=True)
             driver.switch_to.default_content()
             driver.switch_to.frame('iframe')
-            condition = True
             # 判断是否完成任务
             while True:
-                # driver.switch_to.default_content()
-                # driver.switch_to.frame('iframe')
+                driver.switch_to.default_content()
+                driver.switch_to.frame('iframe')
                 elements2= driver.find_elements(By.CLASS_NAME, 'ans-job-icon-clear ')
                 element2=elements2[i]
                 txt = element2.get_attribute('aria-label')
@@ -136,6 +156,7 @@ def study_page(driver,course_name):
                     cond=True
                     break
                 else:
+                    video_question1(i,driver)
                     pyautogui.move(20,0,)
                     time.sleep(1)
                     pyautogui.move(-20,0)
@@ -165,7 +186,10 @@ def judge_active(driver):
     element=driver.find_element(By.CSS_SELECTOR, '[class="prev_ul clearfix"]')
     elements = element.find_elements(By.CSS_SELECTOR, '[title="视频"]')
     num=len(elements)
-    txt=elements[num-1].get_attribute('class')
+    try:
+        txt=elements[num-1].get_attribute('class')
+    except IndexError:
+        txt = 'active'
     if txt=='active':
         return True
     else:
@@ -174,4 +198,4 @@ def judge_active(driver):
 
 
 if __name__ == '__main__':
-    speed()
+    vido_question()

@@ -6,6 +6,8 @@ import re
 import threading
 import tkinter as tk
 import subprocess
+
+from PIL import Image, ImageTk
 from colorama import Fore
 from tkinter import ttk, font, messagebox, filedialog
 
@@ -32,7 +34,7 @@ class Start:
 
         self.root = tk.Tk()
         self.root.geometry("+1050+20")  # 设置窗口大小
-        self.root.title('学习通刷课')
+        self.root.title('学习通刷课（exe)')
         self.root.attributes('-topmost',False)
         self.score_frame = tk.Frame(self.root)
         self.main_frame = tk.Frame(self.root)
@@ -40,7 +42,7 @@ class Start:
         self.vido_frame = tk.Frame(self.root)
         self.set_frame = tk.Frame(self.root)
         self.help_frame = tk.Frame(self.root)
-
+        self.money_frame = tk.Frame(self.root)
         # self.root.resizable(False, False)  # 禁止用户调整窗口大小
          # 使用ico格式的图标文件
         self.root.iconbitmap(r'task\img\xuexitong1 .ico')
@@ -56,12 +58,13 @@ class Start:
         # 创建菜单栏
         menu_bar = tk.Menu(self.root,bg='black',fg='white')
         # 创建文件菜单并添加选项
-        menu_bar.add_command(label='   主页   ',command=self.show_main,font= ("Helvetica", 12))
+        menu_bar.add_command(label='  主页  ',command=self.show_main,font= ("Helvetica", 12))
         menu_bar.add_command(label='  刷课日志  ', command=self.show_vido)
         menu_bar.add_command(label='  测试成绩  ', command=self.show_score)
         menu_bar.add_command(label='  报错日志  ', command=self.show_error)
         menu_bar.add_command(label=' 设置 ', command=self.show_set)
         menu_bar.add_command(label=' 帮助 ', command=self.show_help)
+        menu_bar.add_command(label='赞助作者', command=self.show_money)
 
         # ---------------- 主页 ----------------
         # 创建按钮1
@@ -76,7 +79,7 @@ class Start:
         self.main_frame.rowconfigure((0,1), weight=1)
         # 创建只读文本框#202022
         self.text_box = tk.Text(self.main_frame,bg='white',height=27,width=55,font=self.font)
-        self.text_box.insert(tk.INSERT,'WELCOME TO 学习通刷课 ！！！\n请先进入设置页面填写信息！！！')
+        self.text_box.insert(tk.INSERT,'WELCOME TO 学习通刷课（exe) ！！！\n请先进入设置页面填写信息！！！')
         self.text_box.tag_configure("center", justify='center')
         self.text_box.tag_add("center", "1.0", "end")
         self.text_box.tag_configure("red", foreground="red")
@@ -205,6 +208,17 @@ class Start:
         self.help_txt.insert(tk.END, self.text)
         self.help_txt.config(state=tk.DISABLED)
 
+        #赞助页面
+        self.label1 = tk.Label(self.money_frame, text="如果对你有帮助，欢迎给我打赏,你们的支持就是我更新的最大动力\n(PS:会优先解决打赏的人出现的问题哦！)", font=self.font)
+        self.label1.grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky=tk.W)
+        # 加载图片
+        self.image = Image.open(r"task\img\money.jpg")  # 替换为你的图片路径
+        self.photo = ImageTk.PhotoImage(self.image)
+
+        # 创建标签并显示图片
+        self.label = tk.Label(self.money_frame, image=self.photo)
+        self.label.grid(row=1, column=0, columnspan=2, padx=10, pady=10, sticky=tk.W)
+
         # 当前时间显示
         self.time_label = tk.Label(self.root,text="")
         self.time_label.grid(row=0, column=0, columnspan=2, padx=10, pady=1, sticky=tk.W)
@@ -226,6 +240,7 @@ class Start:
         self.vido_frame.grid_forget()
         self.set_frame.grid_forget()
         self.help_frame.grid_forget()
+        self.money_frame.grid_forget()
 
     def show_vido(self):
         self.vido_text.config(state=tk.NORMAL)
@@ -244,6 +259,7 @@ class Start:
         self.vido_text.config(state=tk.DISABLED)
         self.set_frame.grid_forget()
         self.help_frame.grid_forget()
+        self.money_frame.grid_forget()
 
     def show_score(self):
         self.score_txt.config(state=tk.NORMAL)
@@ -262,6 +278,7 @@ class Start:
         self.score_txt.config(state=tk.DISABLED)
         self.set_frame.grid_forget()
         self.help_frame.grid_forget()
+        self.money_frame.grid_forget()
 
     def show_error(self):
         try:
@@ -280,6 +297,7 @@ class Start:
         self.error_text.config(state=tk.DISABLED)
         self.set_frame.grid_forget()
         self.help_frame.grid_forget()
+        self.money_frame.grid_forget()
 
     def show_set(self):
         self.set_frame.grid()
@@ -287,6 +305,16 @@ class Start:
         self.score_frame.grid_forget()
         self.main_frame.grid_forget()
         self.vido_frame.grid_forget()
+        self.help_frame.grid_forget()
+        self.money_frame.grid_forget()
+
+    def show_money(self):
+        self.money_frame.grid()
+        self.error_frame.grid_forget()
+        self.score_frame.grid_forget()
+        self.main_frame.grid_forget()
+        self.vido_frame.grid_forget()
+        self.set_frame.grid_forget()
         self.help_frame.grid_forget()
 
     def select_file1(self):
@@ -308,6 +336,7 @@ class Start:
         self.score_frame.grid_forget()
         self.main_frame.grid_forget()
         self.vido_frame.grid_forget()
+        self.money_frame.grid_forget()
 
     def run_program(self):
         """
@@ -376,7 +405,6 @@ class Start:
         self.thread = threading.Thread(target=read_output)
         self.thread.start()
 
-
     def close(self):
 
         if self.process is not None:
@@ -390,7 +418,6 @@ class Start:
                 self.text_box.insert(tk.END, f"关闭失败: {e}\n")
             finally:
                 process = None
-
 
     # 每秒更新 GUI 中的时间显示
     def update_time(self):

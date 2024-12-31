@@ -42,9 +42,14 @@ def get_question_date(driver,course_name,frame):
         except:
             continue
     else:
-        print(color.yellow('无法检测测试是否已完成，默认已完成'),flush=True)
-        txt = '任务点已完成'
-    if txt == '任务点已完成':
+        driver.switch_to.frame(frame)
+        driver.switch_to.frame('frame_content')
+        element = driver.find_element(By.CLASS_NAME, 'testTit_status')
+        txt = element.text
+        time.sleep(3)
+        driver.switch_to.default_content()
+        driver.switch_to.frame('iframe')
+    if  '已完成' in txt:
         pyautogui.scroll(-250)
         print(color.green('测试已完成'),flush=True)
         # driver.switch_to.default_content()
@@ -95,7 +100,6 @@ def get_question_date(driver,course_name,frame):
             use_extension(item0, i)
             myGetAnswer = GetAnswer()
             answerList,answer_options_dicts_lst = myGetAnswer.getAnswer(title_option, driver,questionType)
-            pyautogui.click(pyautogui.locateOnScreen(r'task\img\img_close.png',confidence=0.8),duration=0.5)
 
             # 判断是否找到答案
             if answerList is None or len(answerList) == 0:
