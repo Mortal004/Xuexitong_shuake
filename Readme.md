@@ -53,4 +53,8 @@
   3.开发者不对因使用本脚本导致的任何问题负责。
   4.本项目只供对编程感兴趣、喜欢研究的同学来学习和锻炼自己的能力。
   5.本项目禁止进行任何商业化
-  [[Anurag's GitHub stats](https://github-readme-stats.vercel,app/api?username=Mortal004)[[Anurag's GitHub stats](https://github-readme-stats.vercel,app/api?username=Mortal004)
+# 我的 GitHub 统计
+ 
+[![Anurag's GitHub stats](https://github-readme-stats.vercel.app/api?username=Mortal004)](https://github.com/anuraghazra/github-readme-stats)
+ 
+[![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=Mortal004&layout=compact)](https://github.com/anuraghazra/github-readme-stats)
