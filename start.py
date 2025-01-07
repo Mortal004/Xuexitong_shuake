@@ -34,8 +34,10 @@ class Start:
 
         self.root = tk.Tk()
         self.root.geometry("+1050+20")  # 设置窗口大小
-        self.root.title('学习通刷课（exe)')
-        self.root.attributes('-topmost',False)
+        self.root.title('学习通刷课')
+        # 初始设定窗口置顶
+        self.is_topmost = True
+        self.root.wm_attributes("-topmost", self.is_topmost)
         self.score_frame = tk.Frame(self.root)
         self.main_frame = tk.Frame(self.root)
         self.error_frame= tk.Frame(self.root)
@@ -79,7 +81,7 @@ class Start:
         self.main_frame.rowconfigure((0,1), weight=1)
         # 创建只读文本框#202022
         self.text_box = tk.Text(self.main_frame,bg='white',height=27,width=55,font=self.font)
-        self.text_box.insert(tk.INSERT,'WELCOME TO 学习通刷课（exe) ！！！\n请先进入设置页面填写信息！！！')
+        self.text_box.insert(tk.INSERT,'WELCOME TO 学习通刷课 ！！！\n请先进入设置页面填写信息！！！')
         self.text_box.tag_configure("center", justify='center')
         self.text_box.tag_add("center", "1.0", "end")
         self.text_box.tag_configure("red", foreground="red")
@@ -130,17 +132,25 @@ class Start:
         #配置设置
         self.configuration_set_frame=tk. LabelFrame(self.set_frame, text="配置设置：",font=self.font,padx=10, pady=10)
         self.configuration_set_frame.grid(row=0,column=0,sticky="nsew", padx=5, pady=5)
+        #browser
+        self.browser_label = tk.Label(self.configuration_set_frame, text="浏览器:", font=self.font)
+        self.browser_label.grid(row=0, column=1, padx=5, pady=10, sticky=tk.W)
+        self.browser_options = ["chrome", "edge"]
+        self.browser_entry = ttk.Combobox(self.configuration_set_frame, values=self.browser_options, font=self.font)
+        self.browser_entry.grid(row=0, column=2, padx=5, pady=10, sticky=tk.W)
+        # self.browser_entry['state'] = 'readonly'
+
         # Chrome driver
-        self.chrome_driver_label = tk.Label(self.configuration_set_frame, text="谷歌驱动:",font=self.font)
+        self.chrome_driver_label = tk.Label(self.configuration_set_frame, text="驱动地址:",font=self.font)
         self.chrome_driver_label.grid(row=1, column=1, padx=5, pady=10, sticky=tk.W)
-        self.chrome_driver_entry = tk.Entry(self.configuration_set_frame,width=43)
+        self.chrome_driver_entry = tk.Entry(self.configuration_set_frame,width=40)
         self.chrome_driver_entry.grid(row=1, column=2, padx=5, pady=10, sticky=tk.W)
         self.open_file_button = tk.Button(self.configuration_set_frame, text="选择文件", command=self.select_file1)
         self.open_file_button.grid(row=2, column=2, sticky=tk.W)
         # 搜题插件
         self.extension_label = tk.Label(self.configuration_set_frame, text="搜题插件:",font=self.font)
         self.extension_label.grid(row=3, column=1, padx=5, pady=5, sticky=tk.W)
-        self.extension_entry = tk.Entry(self.configuration_set_frame,width=43)
+        self.extension_entry = tk.Entry(self.configuration_set_frame,width=40)
         self.extension_entry.grid(row=3, column=2, padx=5, pady=5, sticky=tk.W)
         self.select_file_button = tk.Button(self.configuration_set_frame, text="选择文件", command=self.select_file2)
         self.select_file_button.grid(row=4, column=2,sticky=tk.W)
@@ -160,10 +170,10 @@ class Start:
         self.size_entry = ttk.Combobox(self.frame_set_frame, values=self.size, font=self.font)
         self.size_entry.grid(row=2, column=2, padx=5, pady=5, sticky=tk.W)
         # 窗口置顶勾选框
-        self.topmost_var = tk.BooleanVar(value=False)
-        self.topmost_check = ttk.Checkbutton(
-            self.frame_set_frame, text='窗口始终置顶', variable=self.topmost_var,
-            command=self.toggle_topmost, style='TCheckbutton')
+        # 复选框变量
+        self.check_var = tk.IntVar()
+        self.topmost_check = ttk.Checkbutton(self.frame_set_frame, text="取消窗口置顶", variable=self.check_var,
+                                            command=self.toggle_topmost)
         self.topmost_check.grid(row=3,column=1,padx=5,columnspan=2)
 
         #信息设置
@@ -230,8 +240,12 @@ class Start:
 
     def toggle_topmost(self):
         """切换窗口始终置顶属性"""
-        self.root.attributes("-topmost", self.topmost_var.get())
-
+        if self.check_var.get():
+            self.is_topmost = False
+            self.root.wm_attributes("-topmost", False)
+        else:
+            self.is_topmost = True
+            self.root.wm_attributes("-topmost", True)
 
     def show_main(self):
         self.main_frame.grid()
@@ -351,7 +365,7 @@ class Start:
             读取 main.py 程序的输出，并将其显示在文本框中。
             """
             # 启动 main.py 程序
-            self.process = subprocess.Popen(['python','main.py'],
+            self.process = subprocess.Popen(['Main.exe'],
                                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             color_tag = None
             while True:
@@ -459,11 +473,19 @@ class Start:
                 self.account_info = json.load(f)
         except FileNotFoundError:
             self.account_info = {}
+        if self.browser_entry.get()=='':
+            tk.messagebox.showerror('警告', message='请选择浏览器')
+            return False
+        else:
+            self.account_info['browser']=self.browser_entry.get()
         if self.chrome_driver_entry.get()=='':
-            tk.messagebox.showerror('警告', message='请填写谷歌驱动的地址')
+            tk.messagebox.showerror('警告', message='请填写驱动的地址')
             return False
         else:
             self.account_info['driver_path']=self.chrome_driver_entry.get()
+        if self.browser_entry.get() not in self.chrome_driver_entry.get():
+            tk.messagebox.showerror('警告', message='请检查你的浏览器是否与驱动对应')
+            return False
         if self.extension_entry.get()=='':
             tk.messagebox.showerror('警告', message='请填写搜题插件的地址')
             return False
@@ -516,12 +538,14 @@ class Start:
                 self.account_info = json.load(fil)
                 self.course_score_entry.insert(0, self.account_info['cour'])
                 self.course_vido_entry.insert(0, self.account_info['cour'])
+                self.browser_entry.insert(0, self.account_info['browser'])
+                self.chrome_driver_entry.insert(0, self.account_info['driver_path'])
+                self.extension_entry.insert(0, self.account_info['extension_path'])
                 self.phone_number_entry.insert(0, self.account_info['phone_number'])
                 self.password_entry.insert(0, self.account_info['password'])
                 self.cour_entry.insert(0, self.account_info['cour'])
                 self.question_entry.insert(0, self.account_info['choice'])
-                self.chrome_driver_entry.insert(0,self.account_info['driver_path'])
-                self.extension_entry.insert(0,self.account_info['extension_path'])
+
                 try:
                     self.font_entry.insert(0, self.account_info['font_type'])
                     self.size_entry.insert(0,self.account_info['font_size'])
