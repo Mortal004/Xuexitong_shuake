@@ -9,8 +9,7 @@ from selenium.common import TimeoutException, NoSuchDriverException, NoSuchWindo
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
+
 
 from task.tool import color
 from task.watch_ppt import __ppt
@@ -43,7 +42,10 @@ def login_study(driver,phone_number,password):
 
     # 点击登录
     login_button = driver.find_element(By.ID, 'loginBtn')
-    login_button.click()
+    try:
+        login_button.click()
+    except:
+       pass
     time.sleep(3)
     # 转到页面内窗口
     #点击课程
@@ -299,32 +301,36 @@ def run(driver,choice,course_name):
         time.sleep(1)
 
 
-def edge():#记得修改导入
-    # 设置 Edge 选项
-    options = Options()
-    options.add_argument(r"C:\Users\HUAWEI\Downloads\zyb-227372.crx")  # 指定用户资料目录
-    # 初始化 Edge WebDriver
-    driver = webdriver.Edge(service=Service(r"D:\Download\edgedriver_win64\msedgedriver.exe"),options=options)
-
 def main(phone_number,password,course_name,choice):
     with open('account_info.json', 'r', encoding='utf-8') as f:
-        chrome_info = json.load(f)
-# 设置ChromeDriver的路径
-    driver_path = chrome_info['driver_path']
-    # 创建ChromeDriver服务
+        browser_info = json.load(f)
+    # 设置ChromeDriver的路径
+    driver_path = browser_info['driver_path']
+    extension_path=browser_info['extension_path']
+    browser=browser_info['browser']
+    if browser=='chrome':
+        from selenium.webdriver.chrome.service import Service
+        from selenium.webdriver.chrome.options import Options
+    else :
+        from selenium.webdriver.edge.service import Service
+        from selenium.webdriver.edge.options import Options
+    # 创建Driver服务
     service = Service(driver_path)
     if choice=='是':
         # 可以设置Chrome启动选项（如果需要）
         options = Options()
         try:
-            options.add_extension(chrome_info['extension_path'])
+            options.add_extension(extension_path)
         except OSError:
             print(color.red('无法正常打开搜题插件，请检查地址是否正确，或检查版本是否与谷歌浏览器一致'),flush=True)
             return
-            # 初始化Chrome浏览器
-        driver = webdriver.Chrome(service=service,options=options)
     else:
-        driver = webdriver.Chrome(service=service)
+        options=None
+    if browser=='edge':
+        driver = webdriver.Edge(service=service, options=options)
+    else:
+        # 初始化Chrome浏览器
+        driver = webdriver.Chrome(service=service, options=options)
     # driver.maximize_window()
     driver.implicitly_wait(2)
     __questionList: list[Answerable] = []
@@ -347,17 +353,17 @@ if __name__ == '__main__':
             except NoSuchWindowException as e:
                 print(color.red('窗口意外关闭'),flush=True)
             except NoSuchDriverException as e:
-                print(color.red('无法正常打开谷歌驱动，请检查地址是否正确，或检查版本是否与谷歌浏览器一致'),flush=True)
+                print(color.red('无法正常运行驱动，请检查地址是否正确，或检查版本是否与谷歌浏览器一致'),flush=True)
             except WebDriverException as e:
                 if 'ERR_INTERNET_DISCONNECTED' in str(e) or 'ERR_NAME_NOT_RESOLVED' in str(e):
                     print(color.red('你网都没连，刷个屁的课啊'),flush=True)
                 else:
                     print(color.red('出错了，具体原因请前往错误日志查看'),flush=True)
                     error_msg = traceback.format_exc()
-                    send_error(error_msg)
+                    send_error("看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)"+error_msg)
             except Exception as e:
                 error_msg = traceback.format_exc()
-                send_error(error_msg)
+                send_error("看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)"+error_msg)
                 print(color.red('出错了，具体原因请前往错误日志查看'),flush=True)
     except FileNotFoundError:
         print(color.red('未填写信息或未保存，请前往设置页面重新设置'),flush=True)
