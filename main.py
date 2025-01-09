@@ -32,7 +32,7 @@ def login_study(driver,phone_number,password):
     无。
     """
     # 打开网页
-    driver.get("https://passport2.chaoxing.com/login?fid=&newversion=true&refer=https%3A%2F%2Fi.chaoxing.com")
+    driver.get("https:i.chaoxing.com/")
 
     # 自动登录
     element = driver.find_element(By.ID, 'phone')
@@ -50,12 +50,23 @@ def login_study(driver,phone_number,password):
     # 转到页面内窗口
     #点击课程
     try:
-        driver.find_element(By.CSS_SELECTOR,'[title="课程"]').click()
+        driver.find_element(By.CSS_SELECTOR, '[title="新泛雅"]').click()
         time.sleep(2)
     except:
-        pass
+        try:
+            driver.find_element(By.CSS_SELECTOR,'[title="课程"]').click()
+            time.sleep(2)
+        except:
+            pass
     try:
         driver.switch_to.frame('frame_content')
+        try:
+            # 体验最新版本
+            element=driver.find_element(By.CLASS_NAME,'experience')
+            print(color.green('正在体验最新版本'), flush=True)
+            element.click()
+        except:
+            pass
         # 选择‘我的课程’并点击
         element=driver.find_element(By.CLASS_NAME,'course-tab')
         elements=element.find_elements(By.TAG_NAME,'div')
@@ -70,6 +81,7 @@ def login_study(driver,phone_number,password):
 
 
 def choice_course(driver, course_name):
+    # time.sleep(200)
     """
     选择指定名称的课程
 
@@ -105,6 +117,25 @@ def choice_course(driver, course_name):
 
             # 打印选择的课程名称
             print(color.green(f'您已选择观看《{course_name}》'), flush=True)
+            #体验最新版本
+            try:
+
+                element=driver.find_element(By.CLASS_NAME,'experience')
+                time.sleep(2)
+                element.click()
+                print(color.green('正在体验最新版本'),flush=True)
+                # 遍历所有窗口句柄
+                for handle in driver.window_handles:
+                    # 切换到当前窗口
+                    driver.switch_to.window(handle)
+                    # 如果当前窗口的标题包含指定的课程名称
+                    if '课程' in driver.title:
+                        # 跳出循环，因为已经找到了匹配的窗口
+                        break
+                choice_course(driver,course_name)
+            except:
+                pass
+
             break
     else:
         print(color.red(f"未找到《{course_name}》这门课程，请确认好课程名称后再试"),flush=True)
@@ -127,7 +158,7 @@ def choice_course(driver, course_name):
         # 切换到当前窗口
         driver.switch_to.window(handle)
         # 如果当前窗口的标题包含指定的课程名称
-        if course_name in driver.title:
+        if course_name == driver.title:
             # 跳出循环，因为已经找到了匹配的窗口
             break
 
@@ -137,7 +168,7 @@ def choice_course(driver, course_name):
         if element.text=='章节':
             element.click()
             break
-
+def find_mission(driver):
     # 切换到名为 frame_content-zj 的 iframe
     driver.switch_to.frame("frame_content-zj")
 
@@ -340,6 +371,7 @@ def main(phone_number,password,course_name,choice):
     login_study(driver,phone_number,password)
     # #选课
     choice_course(driver,course_name)
+    find_mission(driver)
     turn_page(driver)
     fold(driver)
     run(driver,choice,course_name)
