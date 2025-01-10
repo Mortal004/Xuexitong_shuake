@@ -65,13 +65,9 @@ def video_question1(i,driver):
             print(color.yellow('已检测到视频中有题目'), flush=True)
             # title_type=element.find_element(By.CLASS_NAME,'tkTopic_title').text
             options=element.find_element(By.CLASS_NAME,'tkItem_ul')
-            options=options.find_elements(By.TAG_NAME,'li')
-            if len(options)==2 :
-                options[k].click()
-                k+=1
-            elif len(options)==4:
-                options[k].click()
-                k+=1
+            options=options.find_elements(By.TAG_NAME,'li')     
+            options[k].click()
+            k+=1           
             #提交
             submit=element.find_element(By.ID,'videoquiz-submit')
             submit.click()
