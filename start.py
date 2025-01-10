@@ -365,7 +365,7 @@ class Start:
             读取 main.py 程序的输出，并将其显示在文本框中。
             """
             # 启动 main.py 程序
-            self.process = subprocess.Popen(['Main.exe'],
+            self.process = subprocess.Popen(['python','main.py'],
                                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             color_tag = None
             while True:
