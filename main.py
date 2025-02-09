@@ -2,15 +2,14 @@ import json
 import sys
 import time
 import traceback
-
 from selenium.webdriver.support import expected_conditions as EC
+import pyautogui
 from selenium.common import TimeoutException, NoSuchDriverException, NoSuchWindowException, WebDriverException, \
     NoSuchElementException, ElementNotInteractableException
+from selenium.webdriver import ActionChains
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium import webdriver
-
-
 from task.tool import color
 from task.watch_ppt import __ppt
 from task.watch_vido import study_page
@@ -33,7 +32,6 @@ def login_study(driver,phone_number,password):
     """
     # 打开网页
     driver.get("https:i.chaoxing.com/")
-
     # 自动登录
     element = driver.find_element(By.ID, 'phone')
     element1 = driver.find_element(By.ID, 'pwd')
@@ -71,7 +69,7 @@ def login_study(driver,phone_number,password):
         element=driver.find_element(By.CLASS_NAME,'course-tab')
         elements=element.find_elements(By.TAG_NAME,'div')
         for element in elements:
-            if element.text=='我学的课':
+            if element.text== '我学的课':
                 element.click()
                 break
         element.click()
@@ -79,8 +77,38 @@ def login_study(driver,phone_number,password):
     except:
         pass
 
+def set_speed_extension(driver,browser):
+    #打开设置页面
+    time.sleep(2)
+    driver.get(f'{browser}://extensions/?id=mjhlabbcmjflkpjknnicihkfnmbdfced')
+    if browser=='edge':
+        driver.find_element(By.ID,'itemOptions').click()
+        turn_page(driver,'extension://mjhlabbcmjflkpjknnicihkfnmbdfced/options.html')
+    elif browser=='chrome':
+        # 等待宿主元素加载
+        host_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.TAG_NAME, "extensions-manager"))
+        )
+        # 获取 Shadow Root
+        shadow_root = driver.execute_script("return arguments[0].shadowRoot", host_element)
 
-def choice_course(driver, course_name):
+        host_element2=shadow_root.find_element(By.ID, "toolbar")
+        # 获取 Shadow Root
+        shadow_root2 = driver.execute_script("return arguments[0].shadowRoot", host_element2)
+
+        # 定位 Shadow DOM 中的元素
+        shadow_root2.find_element(By.ID,'devMode').click()
+        # time.sleep(2000)
+        driver.get('chrome-extension://mjhlabbcmjflkpjknnicihkfnmbdfced/options.html')
+
+    elements=driver.find_elements(By.CLASS_NAME,'fieldValue')
+    elements[len(elements)-1].click()
+    element=driver.find_element(By.XPATH,'//*[@id="App"]/div[2]/div[2]/div[3]/div[1]/div[1]/div/div[5]/input')
+    element.clear()
+    element.send_keys('1')
+
+
+def choice_course(driver, course_name,speed,condition):
     # time.sleep(200)
     """
     选择指定名称的课程
@@ -93,25 +121,17 @@ def choice_course(driver, course_name):
     无
     """
     # 查找所有课程名称元素
-
     course_elements = driver.find_elements(By.CLASS_NAME, 'course-name')
     if len(course_elements)==0:
         course_elements = driver.find_elements(By.CLASS_NAME, 'courseName')
-
     # 遍历所有课程元素
     for course_element in course_elements:
         # 如果课程元素的标题属性与指定的课程名称匹配
         if  course_name in course_element.get_attribute('title'):
             # 滚动到课程名称元素的位置
             driver.execute_script("arguments[0].scrollIntoView();", course_element)
-
-            # 等待课程名称元素变为可点击状态
-            # try:
-            #     WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, 'course-name')))
-            # except TimeoutException:
-            #     print(color.red("等待课程名称元素可点击超时"),flush=True)
-            #     continue
-            #
+            if condition:
+                set_speed(speed,driver)
             # 使用 JavaScript 点击课程名称元素
             driver.execute_script("arguments[0].click();", course_element)
 
@@ -119,20 +139,13 @@ def choice_course(driver, course_name):
             print(color.green(f'您已选择观看《{course_name}》'), flush=True)
             #体验最新版本
             try:
-
                 element=driver.find_element(By.CLASS_NAME,'experience')
                 time.sleep(2)
                 element.click()
                 print(color.green('正在体验最新版本'),flush=True)
                 # 遍历所有窗口句柄
-                for handle in driver.window_handles:
-                    # 切换到当前窗口
-                    driver.switch_to.window(handle)
-                    # 如果当前窗口的标题包含指定的课程名称
-                    if '课程' in driver.title:
-                        # 跳出循环，因为已经找到了匹配的窗口
-                        break
-                choice_course(driver,course_name)
+                turn_page(driver,'课程')
+                choice_course(driver,course_name,speed,False)
             except:
                 pass
 
@@ -141,7 +154,7 @@ def choice_course(driver, course_name):
         print(color.red(f"未找到《{course_name}》这门课程，请确认好课程名称后再试"),flush=True)
         data = []
         try:
-            with open('course_name.json', 'r') as f:
+            with open('task/tool/course_name.json', 'r') as f:
                 data = json.load(f)
         except FileNotFoundError:
             pass
@@ -149,23 +162,14 @@ def choice_course(driver, course_name):
             data.remove(course_name)
         except ValueError:
             pass
-        with open('course_name.json', 'w') as f:
+        with open('task/tool/course_name.json', 'w') as f:
             json.dump(data, f)
         sys.exit(1)
-
-    # 遍历所有窗口句柄
-    for handle in driver.window_handles:
-        # 切换到当前窗口
-        driver.switch_to.window(handle)
-        # 如果当前窗口的标题包含指定的课程名称
-        if course_name == driver.title:
-            # 跳出循环，因为已经找到了匹配的窗口
-            break
-
+    turn_page(driver,course_name)
     # 点击章节标签
     elements=driver.find_elements(By.CLASS_NAME, 'nav_content')
     for element in elements:
-        if element.text=='章节':
+        if element.text== '章节':
             element.click()
             break
 def find_mission(driver):
@@ -176,101 +180,40 @@ def find_mission(driver):
     element = driver.find_element(By.CSS_SELECTOR, '.catalog_tishi120')
     # 打印提示信息，表示已检测到未完成点
     print(color.magenta('已检测到未完成点'),flush=True)
-    time.sleep(2)
+    time.sleep(0.5)
     # 点击待完成任务点的元素
     element.click()
 
-def turn_page(driver):
+def turn_page(driver,page_name):
     for handle in driver.window_handles:
         # 先切换到该窗口
         driver.switch_to.window(handle)
         # 得到该窗口的标题栏字符串，判断是不是我们要操作的那个窗口
-        if '学生学习页面' in driver.title:
+        if page_name in driver.title:
             # 如果是，那么这时候WebDriver对象就是对应的该该窗口，正好，跳出循环，
             break
 
     #折叠侧边目录
-
 def fold(driver):
     element = driver.find_element(By.XPATH, '//*[@id="selector"]/div[2]')
     element.click()
-    time.sleep(2)
+    time.sleep(1)
 
-def judge(driver):
-    # time.sleep(3)
-    print(color.green('正在检测页面内容'), flush=True)
+
+def set_speed(speed,driver):
+    print(color.blue(f'调节倍数为：{speed}X'), flush=True)
     try:
-        driver.switch_to.default_content()
-        driver.switch_to.frame('iframe')
-        try:#ext-gen1049 > div.wrap > div > div > iframe
-            element = driver.find_element(By.ID, "ext-gen1049")
-            frame = element.find_element(By.TAG_NAME, 'iframe')
-        except:
-            frame = driver.find_element(By.XPATH, '//*[@id="ext-gen1050"]/iframe')
-        driver.switch_to.frame(frame)
-    except:
-        print(color.green('该页面无法识别'),flush=True)
-        return 'Other',1
-    try:
-        # driver.switch_to.frame('frame_content')
-        driver.find_element(By.ID, 'reader')
-        print(color.green('该页面为视频'),flush=True)
-        return 'Vido',frame
-    except:
-        try:
-            driver.find_element(By.ID,'frame_content')
-            print(color.green('该页面为测验'))
-            return 'Test',frame
-        except:
-            try:
-                driver.find_element(By.ID,'panView')
-                print(color.green('该页面为PPT'),flush=True)
-                return 'PPT',frame
-            except:
-                print(color.red('该页面无法识别'),flush=True)
-                return 'Other',1
-
-def run1(driver,choice,course_name):
-    while True:
-        content,frame=judge(driver)
-        if content=='Vido':
-                #播放视频
-                study_page(driver,course_name)
-
-        elif content=='Test':
-            if choice=='是':
-                print(color.green('开始做题'),flush=True)
-                try:
-                    get_question_date(driver,course_name,frame)
-                except Exception as e:
-                    error_msg = traceback.format_exc()
-                    send_error(error_msg)
-                    print(color.yellow('出错了，请自行保存或提交'),flush=True)
-                    time.sleep(100)
-                    turn_page(driver)
-            # 做题
-            elif choice=='否':
-                print(color.yellow('跳过测试题'),flush=True)
-
-        elif content=='PPT':
-            # 播放PPT
-            __ppt(driver)
-
-        elif content=='Other':
-            pass
-
-        driver.switch_to.default_content()
-        try:
-            driver.find_element(By.XPATH, '//*[@id="prevNextFocusNext"]').click()
-        except ElementNotInteractableException:
-            print(color.red('该课程全部已完结，撒花！！！'),flush=True)
-            break
-        # 确认
-        try:
-            driver.find_element(By.XPATH, '//*[@id="mainid"]/div[1]/div/div[3]/a[2]').click()
-        except:
-            pass
-        time.sleep(1)
+        speed=int(speed)-1
+        # body = driver.find_element(By.TAG_NAME, 'div')
+        # body.click()
+        for i in range(int(speed)):
+            pyautogui.press('d')
+            action=ActionChains(driver)
+            action.send_keys('d').perform()
+            time.sleep(0.1)
+        print(color.green('调节成功'), flush=True)
+    except Exception as e:
+        print(color.yellow(f'调节失败{e}'), flush=True)
 
 def page_message(driver):
     driver.switch_to.default_content()
@@ -278,7 +221,7 @@ def page_message(driver):
     frame=None
     driver.switch_to.frame('iframe')
     try:
-        driver.find_element(By.CSS_SELECTOR,'[class="ans-attach-online ans-insertvideo-online"]')
+        driver.find_element(By.CSS_SELECTOR, '[class="ans-attach-online ans-insertvideo-online"]')
         page_message_lst.append('vido')
     except:
         pass
@@ -286,7 +229,11 @@ def page_message(driver):
         driver.find_element(By.CSS_SELECTOR, '[class="ans-attach-online insertdoc-online-ppt"]')
         page_message_lst.append('ppt')
     except:
-        pass
+        try:
+            driver.find_element(By.CSS_SELECTOR,'[class="ans-attach-online insertdoc-online-pdf"]')
+            page_message_lst.append('ppt')
+        except:
+            pass
     try:
         frame=driver.find_element(By.XPATH,'//iframe[@src="/ananas/modules/work/index.html?v=2024-1212-1629&castscreen=0"]')
         page_message_lst.append('test')
@@ -302,10 +249,10 @@ def run(driver,choice,course_name):
             print(color.red('该页面无法识别'),flush=True)
         else:
             print(color.green(f'该页面含有{page_message_lst}'),flush=True)
-            if 'vido' in page_message_lst:
-                study_page(driver,course_name)
             if 'ppt' in page_message_lst:
                 __ppt(driver)
+            if 'vido' in page_message_lst:
+                study_page(driver,course_name)
             if 'test' in page_message_lst:
                 if choice=='是':
                     try:
@@ -332,12 +279,11 @@ def run(driver,choice,course_name):
         time.sleep(1)
 
 
-def main(phone_number,password,course_name,choice):
-    with open('account_info.json', 'r', encoding='utf-8') as f:
+def main(phone_number,password,course_name,choice,speed):
+    with open(r'task\tool\account_info.json', 'r', encoding='utf-8') as f:
         browser_info = json.load(f)
     # 设置ChromeDriver的路径
     driver_path = browser_info['driver_path']
-    extension_path=browser_info['extension_path']
     browser=browser_info['browser']
     if browser=='chrome':
         from selenium.webdriver.chrome.service import Service
@@ -347,16 +293,16 @@ def main(phone_number,password,course_name,choice):
         from selenium.webdriver.edge.options import Options
     # 创建Driver服务
     service = Service(driver_path)
+    options = Options()
+    options.add_extension(r"task\tool\speed.crx")
     if choice=='是':
         # 可以设置Chrome启动选项（如果需要）
-        options = Options()
         try:
-            options.add_extension(extension_path)
+            options.add_extension(r"task\tool\zyb-227372.crx")
         except OSError:
             print(color.red('无法正常打开搜题插件，请检查地址是否正确，或检查版本是否与谷歌浏览器一致'),flush=True)
             return
-    else:
-        options=None
+
     if browser=='edge':
         driver = webdriver.Edge(service=service, options=options)
     else:
@@ -365,23 +311,21 @@ def main(phone_number,password,course_name,choice):
     # driver.maximize_window()
     driver.implicitly_wait(2)
     __questionList: list[Answerable] = []
-    if choice=='是':
-        print(color.red('请扫码（20秒）'), flush=True)
-        time.sleep(2)  # 跳转到选择课程页面
+    set_speed_extension(driver,browser)
     login_study(driver,phone_number,password)
-    # #选课
-    choice_course(driver,course_name)
+    # set_speed(speed,driver)
+    choice_course(driver,course_name,speed,True)
     find_mission(driver)
-    turn_page(driver)
+    turn_page(driver,'学生学习页面')
     fold(driver)
     run(driver,choice,course_name)
 
 if __name__ == '__main__':
     try:
-        with open('account_info.json', 'r', encoding='utf-8') as fil:
+        with open(r'task\tool\account_info.json', 'r', encoding='utf-8') as fil:
             account_info = json.load(fil)
             try:
-                main(account_info['phone_number'],account_info['password'],account_info['cour'],account_info['choice'])
+                main(account_info['phone_number'],account_info['password'],account_info['cour'],account_info['choice'],account_info['speed'])
             except NoSuchWindowException as e:
                 print(color.red('窗口意外关闭'),flush=True)
             except NoSuchDriverException as e:

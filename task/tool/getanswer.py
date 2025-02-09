@@ -3,10 +3,7 @@ import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-import pyautogui
 from selenium.webdriver.common.by import By
-from win32trace import flush
-
 from task.tool import color
 
 
@@ -186,7 +183,7 @@ class GetAnswer:
                 answer_options_dicts_lst.append(answer_options_dict)
                 break
             except:
-                print(color.yellow('请先扫码，然后再点击右上角的剪刀图标，再手动拉框第一个题目'),flush=True)
+                print(color.yellow('请先使用大学生搜题酱手机APP扫码，然后再点击右上角的剪刀图标，手动拉框第一个题目'),flush=True)
                 time.sleep(3)
                 continue
 

@@ -18,14 +18,15 @@ def use_extension(item0,i):
         try:
             pyautogui.hotkey('alt','c')
             size = item0.size
-            num1 = pyautogui.locateOnScreen(fr'task\img\img_{i}.png', confidence=0.95-k)
+            title_num = pyautogui.locateOnScreen(fr'task\img\img_{i}.png', confidence=0.95 - k)
             print(color.blue(color.magenta(f'正在搜索第{i + 1}题')),flush=True)
-            pyautogui.moveTo(num1, duration=0.5)
+            pyautogui.moveTo(title_num, duration=0.5)
             pyautogui.dragRel(size['width'], size['height'] + 80, duration=1)
             time.sleep(3)
             return size['height'] + 80
         except:
             print(color.yellow('未知错误,再来一次'),flush=True)
+            pyautogui.scroll(50)
             k+=0.1
             continue
 
@@ -35,13 +36,10 @@ def get_question_date(driver,course_name,frame):
     driver.switch_to.frame('iframe')
     # 判断是否完成任务
     elements = driver.find_elements(By.CLASS_NAME, 'ans-job-icon ')
-    for element in elements:
-        try:
-            txt = element.get_attribute('aria-label')
-            break
-        except:
-            continue
-    else:
+    try:
+        element=elements[len(elements)-1]
+        txt = element.get_attribute('aria-label')
+    except:
         driver.switch_to.frame(frame)
         driver.switch_to.frame('frame_content')
         element = driver.find_element(By.CLASS_NAME, 'testTit_status')
@@ -79,6 +77,9 @@ def get_question_date(driver,course_name,frame):
             title_option=decodeSecret.decode(item0.text)
             __questionList = []
             item_title = item0.find_element(By.CSS_SELECTOR, '[class="clearfix font-cxsecret fontLabel"]')
+            #滚动到题目
+            driver.execute_script("arguments[0].scrollIntoView();", item_title)
+            pyautogui.scroll(50)
             title = decodeSecret.decode(item_title.text)
             title_lst.append(title)
 
@@ -95,7 +96,6 @@ def get_question_date(driver,course_name,frame):
                 print(color.yellow("跳过该题"),flush=True)
                 pyautogui.scroll(-int(round(item0.size['height']*0.7)))
                 continue
-
             # 获取问题答案
             use_extension(item0, i)
             myGetAnswer = GetAnswer()
@@ -133,7 +133,7 @@ def get_question_date(driver,course_name,frame):
                 print("题目类型：" + questionType,flush=True)
                 print("题目内容：" + question,flush=True)
                 print("跳过该题目",flush=True)
-            pyautogui.scroll(-int(round(item0.size['height']*0.75)))
+            # pyautogui.scroll(-int(round(item0.size['height']*0.75)))
             ans_num+=1
         ans_rate=ans_num/len(questionList0)
         __submit(driver,course_name,frame,ans_rate)
@@ -187,7 +187,7 @@ def save_score(driver,course_name,frame):
     score=element.text
     driver.switch_to.default_content()
     f = open(f'《{course_name}》的成绩记录.txt', 'a', encoding='utf-8')
-    f.write(f'已完成:《{title}》章节，完成时间：{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))}，测试得分：{score}分\n')
+    f.write(f'已完成:《{title}》章节，完成时间：{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))}\n测试得分：{score}分\n')
 
 
 if __name__ == '__main__':
