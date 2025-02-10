@@ -27,9 +27,9 @@
 
 - selenium
 - pyautogui
-- ctkinter
 - requests
 - customtkinter
+- colorama
 
 安装示例（使用 pip）：
 
