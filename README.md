@@ -61,8 +61,6 @@ pip install selenium pyautogui requests colorama customtkinter
    - 第一个题目需要手动拉框搜题，后续题目由脚本自动处理。
    - 请注意，目前刷题功能仅支持选择题和判断题，答案不保证百分之百正确。
 
-4. **使用教程**
-  - 视频教程
 
 ## 下载已打包的文件
 1. [**Github/release**](https://github.com/Mortal004/Xuexitong_shuake/releases)
