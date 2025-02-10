@@ -32,6 +32,8 @@ def login_study(driver,phone_number,password):
     """
     # 打开网页
     driver.get("https:i.chaoxing.com/")
+    turn_page(driver,'用户登录')
+
     # 自动登录
     element = driver.find_element(By.ID, 'phone')
     element1 = driver.find_element(By.ID, 'pwd')
