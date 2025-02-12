@@ -3,14 +3,8 @@ import pyautogui
 from task.tool.Match import match
 from task.tool.getanswer import GetAnswer
 from task.tool.no_secret import DecodeSecret
-
-# 导入全局变量
-from task.tool.globalvar import spliter
 from task.tool import color
-
-# 第三方库
 from selenium.webdriver.common.by import By
-
 
 def use_extension(item0,i):
     k=0
@@ -30,17 +24,16 @@ def use_extension(item0,i):
             k+=0.1
             continue
 
-def get_question_date(driver,course_name,frame):
-    time.sleep(3)
-    driver.switch_to.default_content()
-    driver.switch_to.frame('iframe')
+
+def get_question_date(driver,course_name,test_frame):
+    # 滚动到测试
+    driver.execute_script("arguments[0].scrollIntoView();", test_frame)
     # 判断是否完成任务
-    elements = driver.find_elements(By.CLASS_NAME, 'ans-job-icon ')
     try:
-        element=elements[len(elements)-1]
+        element = test_frame.find_element(By.XPATH, 'preceding-sibling::div[1]')
         txt = element.get_attribute('aria-label')
     except:
-        driver.switch_to.frame(frame)
+        driver.switch_to.frame(test_frame)
         driver.switch_to.frame('frame_content')
         element = driver.find_element(By.CLASS_NAME, 'testTit_status')
         txt = element.text
@@ -50,13 +43,10 @@ def get_question_date(driver,course_name,frame):
     if  '已完成' in txt:
         pyautogui.scroll(-250)
         print(color.green('测试已完成'),flush=True)
-        # driver.switch_to.default_content()
-        # driver.find_element(By.XPATH, '//*[@id="prevNextFocusNext"]').click()
         return
     else:
         print(color.green('开始做题'), flush=True)
-        # element = driver.find_element(By.XPATH, '//*[@id="ext-gen1049"]/div[2]/div/p/div/iframe')
-        driver.switch_to.frame(frame)
+        driver.switch_to.frame(test_frame)
         driver.switch_to.frame('frame_content')
 
         # 实例化 DecodeSecret 类
@@ -66,13 +56,11 @@ def get_question_date(driver,course_name,frame):
 
         # 获取页面中的所有题目
         questionList0 = driver.find_elements(By.CSS_SELECTOR, '[class="singleQuesId"]')
-
-        print(color.yellow("当前页面共有{}题".format(len(questionList0))),flush=True)
-
+        print(color.yellow("当前测试共有{}题".format(len(questionList0))),flush=True)
         title_lst = []  # 解码后的题目及其类型
         ans_num=0
         for i in range(len(questionList0)):
-            spliter.print()
+            print(color.green('\n<===================  分隔线  ===================>\n'),flush=True)
             item0 = questionList0[i]
             title_option=decodeSecret.decode(item0.text)
             __questionList = []
@@ -107,7 +95,7 @@ def get_question_date(driver,course_name,frame):
                 continue
             driver.switch_to.frame('iframe')
             # element = driver.find_element(By.XPATH, '//*[@id="ext-gen1049"]/div[2]/div/p/div/iframe')
-            driver.switch_to.frame(frame)
+            driver.switch_to.frame(test_frame)
             driver.switch_to.frame('frame_content')
             if questionType in ("单选题", "多选题"):
                 # 获取题目选项的WebElement对象
@@ -136,7 +124,7 @@ def get_question_date(driver,course_name,frame):
             # pyautogui.scroll(-int(round(item0.size['height']*0.75)))
             ans_num+=1
         ans_rate=ans_num/len(questionList0)
-        __submit(driver,course_name,frame,ans_rate)
+        __submit(driver,course_name,test_frame,ans_rate)
         return
 
 def finish(__questionList):
@@ -149,7 +137,7 @@ def finish(__questionList):
         time.sleep(1)
         answerWebElement.click()
 
-def __submit(driver,course_name,frame,ans_rate):
+def __submit(driver,course_name,test_frame,ans_rate):
     formatted_result="{:.2%}".format(ans_rate)
     print(color.red(f'本次答题率为{formatted_result}'),flush=True)
     if ans_rate>=0.9:
@@ -161,35 +149,31 @@ def __submit(driver,course_name,frame,ans_rate):
         # 点击确认
         driver.switch_to.default_content()
         driver.find_element(By.XPATH, '//*[@id="popok"]').click()
-        try:
-            time.sleep(1)
-            save_score(driver,course_name,frame)
-        except:
-            print(color.yellow('未查询到本次测试成绩'),flush=True)
+        time.sleep(1)
+        save_score(driver,course_name,test_frame)
     else:
         print(color.yellow('3秒后保存'),flush=True)
         time.sleep(3)
         driver.find_element(By.XPATH,'//*[@id="RightCon"]/div[2]/div/div[3]/a[1]').click()
-
-    # 下一节
-    # print(color.green('开始下一节'),flush=True)
-    # driver.find_element(By.XPATH, '//*[@id="prevNextFocusNext"]').click()
     return
 
-def save_score(driver,course_name,frame):
+def save_score(driver,course_name,test_frame):
     element= driver.find_element(By.CLASS_NAME,'prev_title')
     title=element.get_attribute('title')
     driver.switch_to.frame('iframe')
-    # element = driver.find_element(By.XPATH, '//*[@id="ext-gen1049"]/div[2]/div/p/div/iframe')
-    driver.switch_to.frame(frame)
+    driver.switch_to.frame(test_frame)
     driver.switch_to.frame('frame_content')
-    element=driver.find_element(By.CSS_SELECTOR,'.achievement i')
-    score=element.text
+    f = open(fr'task\record\《{course_name}》的成绩记录.txt', 'a', encoding='utf-8')
+    try:
+        element = driver.find_element(By.CSS_SELECTOR, '.achievement i')
+        score = element.text
+        f.write(
+            f'已完成:《{title}》章节中的测试题，完成时间：{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))}\n测试得分：{score}分(本次使用大学生搜题酱答题)\n\n')
+    except:
+        print(color.yellow('未查询到本次测试成绩'), flush=True)
+        f.write(
+            f'已完成:《{title}》章节的测试题，完成时间：{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))}\n测试得分：未查询到(本次使用大学生搜题酱答题)\n\n')
     driver.switch_to.default_content()
-    f = open(f'《{course_name}》的成绩记录.txt', 'a', encoding='utf-8')
-    f.write(f'已完成:《{title}》章节，完成时间：{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))}\n测试得分：{score}分\n')
-
-
 if __name__ == '__main__':
     time.sleep(1)
     for i in range(20):

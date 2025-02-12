@@ -4,8 +4,8 @@ import time
 import traceback
 from selenium.webdriver.support import expected_conditions as EC
 import pyautogui
-from selenium.common import TimeoutException, NoSuchDriverException, NoSuchWindowException, WebDriverException, \
-    NoSuchElementException, ElementNotInteractableException
+from selenium.common import NoSuchDriverException, NoSuchWindowException, WebDriverException, \
+     ElementNotInteractableException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
@@ -13,8 +13,8 @@ from selenium import webdriver
 from task.tool import color
 from task.watch_ppt import __ppt
 from task.watch_vido import study_page
-from task.tool.interface import  Answerable
 from task.quiz import get_question_date
+from task.quiz_deepseek  import Answer
 from task.tool.send_wx import send_error
 
 
@@ -33,7 +33,6 @@ def login_study(driver,phone_number,password):
     # 打开网页
     driver.get("https:i.chaoxing.com/")
     turn_page(driver,'用户登录')
-
     # 自动登录
     element = driver.find_element(By.ID, 'phone')
     element1 = driver.find_element(By.ID, 'pwd')
@@ -177,9 +176,13 @@ def choice_course(driver, course_name,speed,condition):
 def find_mission(driver):
     # 切换到名为 frame_content-zj 的 iframe
     driver.switch_to.frame("frame_content-zj")
-
-    # 查找待完成任务点的元素
-    element = driver.find_element(By.CSS_SELECTOR, '.catalog_tishi120')
+    try:
+        # 查找待完成任务点的元素
+        element = driver.find_element(By.CSS_SELECTOR, '.catalog_tishi120')
+    except:
+        print(color.red('所有任务点均已完成'),flush=True)
+        sys.exit()
+        
     # 打印提示信息，表示已检测到未完成点
     print(color.magenta('已检测到未完成点'),flush=True)
     time.sleep(0.5)
@@ -220,7 +223,6 @@ def set_speed(speed,driver):
 def page_message(driver):
     driver.switch_to.default_content()
     page_message_lst=[]
-    frame=None
     driver.switch_to.frame('iframe')
     try:
         driver.find_element(By.CSS_SELECTOR, '[class="ans-attach-online ans-insertvideo-online"]')
@@ -237,16 +239,16 @@ def page_message(driver):
         except:
             pass
     try:
-        frame=driver.find_element(By.XPATH,'//iframe[@src="/ananas/modules/work/index.html?v=2024-1212-1629&castscreen=0"]')
+        driver.find_element(By.XPATH,'//iframe[@src="/ananas/modules/work/index.html?v=2024-1212-1629&castscreen=0"]')
         page_message_lst.append('test')
     except:
         pass
-    return page_message_lst,frame
+    return page_message_lst
 
 def run(driver,choice,course_name):
     while True:
         print(color.green('正在检测页面内容'), flush=True)
-        page_message_lst,frame=page_message(driver)
+        page_message_lst=page_message(driver)
         if len(page_message_lst)==0:
             print(color.red('该页面无法识别'),flush=True)
         else:
@@ -256,15 +258,24 @@ def run(driver,choice,course_name):
             if 'vido' in page_message_lst:
                 study_page(driver,course_name)
             if 'test' in page_message_lst:
-                if choice=='是':
-                    try:
-                        get_question_date(driver,course_name,frame)
-                    except Exception as e:
-                        error_msg = traceback.format_exc()
-                        send_error(error_msg)
-                        print(color.yellow('出错了，具体原因请前往错误日志查看，请自行保存或提交,10秒后继续'), flush=True)
-                        time.sleep(10)
-                elif choice=='否':
+                if choice!='不刷题':
+                    driver.switch_to.default_content()
+                    driver.switch_to.frame('iframe')
+                    test_frames = driver.find_elements(By.XPATH,
+                                                       '//iframe[@src="/ananas/modules/work/index.html?v=2024-1212-1629&castscreen=0"]')
+                    print(color.magenta(f'已检测到{len(test_frames)}个测试'), flush=True)
+                    for test_frame in test_frames:
+                        try:
+                            if choice=='大学生搜题酱':
+                                get_question_date(driver,course_name,test_frame)
+                            elif choice=='DeepSeek AI':
+                                Answer(driver,test_frame,course_name)
+                        except Exception as e:
+                            error_msg = traceback.format_exc()
+                            send_error(error_msg)
+                            print(color.yellow('出错了，具体原因请前往错误日志查看，请自行保存或提交,10秒后继续'), flush=True)
+                            time.sleep(10)
+                else:
                     print(color.yellow('跳过测试题'),flush=True)
         driver.switch_to.default_content()
         print(color.green('跳转下一页'), flush=True)
@@ -297,7 +308,7 @@ def main(phone_number,password,course_name,choice,speed):
     service = Service(driver_path)
     options = Options()
     options.add_extension(r"task\tool\speed.crx")
-    if choice=='是':
+    if choice=='大学生搜题酱':
         # 可以设置Chrome启动选项（如果需要）
         try:
             options.add_extension(r"task\tool\zyb-227372.crx")
@@ -312,7 +323,6 @@ def main(phone_number,password,course_name,choice,speed):
         driver = webdriver.Chrome(service=service, options=options)
     # driver.maximize_window()
     driver.implicitly_wait(2)
-    __questionList: list[Answerable] = []
     set_speed_extension(driver,browser)
     login_study(driver,phone_number,password)
     # set_speed(speed,driver)
