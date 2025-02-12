@@ -1,3 +1,8 @@
+# Copyright (c) 2025 Mortal004
+# All rights reserved.
+# This software is provided for non-commercial use only.
+# For more information, see the LICENSE file in the root directory of this project.
+
 import io
 import re
 import sys
