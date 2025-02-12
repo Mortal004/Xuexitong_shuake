@@ -12,6 +12,7 @@
 - **自动刷课**：使用 Selenium 库实现网页自动化操作，模拟真实用户观看视频行为，并支持调节视频播放倍速，最高可至 16 倍速。
 - **刷题功能**：支持选择题和判断题的自动答题（目前尚不稳定，答案仅供参考）。其中，刷题功能集成了“大学生搜题酱”插件，
   当进入刷题页面时，会提示使用“大学生手提酱 APP”进行扫码，首次刷题时需要手动拉框搜题。
+  同时现在已经可以支持使用deepseek进行搜题，没有大学生搜题酱那么繁琐。该功能主要使用的是OpenAI库调用deepseek API,发送题目。
 - **可视化控制**：借助 customtkinter 库搭建可视化窗口，用于控制程序运行和显示输出信息。
 - **辅助操作**：利用 pyautogui 库实现对鼠标和键盘的自动操作。
 - **更新检测**：通过 requests 库检测项目更新。
@@ -31,11 +32,12 @@
 - requests
 - customtkinter
 - colorama
+- openai
 
 安装示例（使用 pip）：
 
 ```bash
-pip install selenium pyautogui requests colorama customtkinter
+pip install selenium pyautogui requests colorama customtkinter openai
 ```
 
 ## 配置说明
@@ -65,8 +67,8 @@ pip install selenium pyautogui requests colorama customtkinter
 
 ## 下载已打包的文件
 1. [**Github/release**](https://github.com/Mortal004/Xuexitong_shuake/releases)
-2. [ **百度网盘**](https://pan.baidu.com/s/1NYUk5kQgycVq2Nw3fBl_QQ?pwd=1234) 
-3. [**夸克网盘**](https://pan.quark.cn/s/66b1297a286f)
+2. [ **百度网盘**](https://pan.baidu.com/s/1wbkc_07BqqQuwxri2WJtew?pwd=1234 ) 
+3. [**夸克网盘**](https://pan.quark.cn/s/eba634db1544)
 
 ## 注意事项
 
