@@ -389,7 +389,7 @@ class Start:
                 assets = release_info.get('assets', [])
                 if assets:
                     self.text_box.insert(tk.END, '连接成功\n')
-                    # 获取第一个文件（假设是我们要下载的文件夹压缩包）
+                    # 获取第一个文件
                     first_asset = assets[0]
                     download_url = first_asset['browser_download_url']
                     file_name = first_asset['name']
