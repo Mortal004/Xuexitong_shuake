@@ -23,8 +23,7 @@ import customtkinter as ctk
 
 class Start:
     def __init__(self):
-
-        self.result = None
+        self.process = None
         self.colorama_to_tkinter = {
             'RED': 'red',
             'YELLOW': 'yellow',
@@ -32,12 +31,7 @@ class Start:
             'GREEN': 'green',
             'MAGENTA': 'magenta'
         }
-        self.process = None
         self.font = ("Helvetica", 13)
-        self.cour = None
-        self.password = None
-        self.phone_number = None
-        self.account_info = None
         self.frame_fg_color = "#E3F2FD"
         self.button_color = "#1F6AA5"
         self.button_hover_color='#81AED1'
@@ -138,7 +132,7 @@ class Start:
         # ---------------- 主页 ----------------
         # 启动程序按钮
         self.start_button = ctk.CTkButton(self.main_frame, text="启动程序",height=40, border_spacing=10,fg_color=self.button_color,
-                                          command=lambda: self.run_program(['python','main.py']), font=self.font,hover_color=self.button_hover_color)
+                                          command=lambda: self.run_program(['Main.exe']), font=self.font,hover_color=self.button_hover_color)
         # self.button1.config(image=self.img)
         self.start_button.grid(row=0, column=0,padx=5, pady=10)
         # 关闭程序按钮
@@ -394,7 +388,7 @@ class Start:
                 assets = release_info.get('assets', [])
                 if assets:
                     self.text_box.insert(tk.END, '连接成功\n')
-                    # 获取第一个文件
+                    # 获取第一个文件（假设是我们要下载的文件夹压缩包）
                     first_asset = assets[0]
                     download_url = first_asset['browser_download_url']
                     file_name = first_asset['name']
@@ -508,15 +502,16 @@ class Start:
             self.is_topmost = True
             self.root.wm_attributes("-topmost", False)
 
+    def show_frame(self, frame):
+        for f in self.frame_name_list[:7]:
+            if f != frame:
+                f.grid_forget()
+            else:
+                f.grid(row=1, column=1,sticky='nsew')
+
     def show_main(self):
         self.select_frame_by_name('主页')
-        self.main_frame.grid(row=1, column=1,sticky='nsew')
-        self.error_frame.grid_forget()
-        self.score_frame.grid_forget()
-        self.vido_frame.grid_forget()
-        self.set_frame.grid_forget()
-        self.help_frame.grid_forget()
-        self.money_frame.grid_forget()
+        self.show_frame(self.main_frame)
 
     def show_vido(self,*key):
         self.select_frame_by_name('刷课日志')
@@ -529,13 +524,7 @@ class Start:
         except FileNotFoundError:
             self.vido_text.delete('1.0', tk.END)
             self.vido_text.insert(tk.END, f'暂未查询到《{self.course_vido_entry.get()}》的刷课记录')
-        self.vido_frame.grid(row=1, column=1,sticky='nsew')
-        self.error_frame.grid_forget()
-        self.score_frame.grid_forget()
-        self.main_frame.grid_forget()
-        self.set_frame.grid_forget()
-        self.help_frame.grid_forget()
-        self.money_frame.grid_forget()
+        self.show_frame(self.vido_frame)
         self.vido_text.configure(state=tk.DISABLED)
 
     def show_score(self,*key):
@@ -549,13 +538,7 @@ class Start:
         except FileNotFoundError:
             self.score_txt.delete('1.0', tk.END)
             self.score_txt.insert(tk.END, f'暂未查询到《{self.course_score_entry.get()}》的成绩记录')
-        self.score_frame.grid(row=1, column=1,sticky='nsew')
-        self.error_frame.grid_forget()
-        self.main_frame.grid_forget()
-        self.vido_frame.grid_forget()
-        self.set_frame.grid_forget()
-        self.help_frame.grid_forget()
-        self.money_frame.grid_forget()
+        self.show_frame(self.score_frame)
         self.score_txt.configure(state=tk.DISABLED)
 
     def show_error(self):
@@ -569,50 +552,26 @@ class Start:
         except FileNotFoundError:
             self.error_text.delete('1.0', tk.END)
             self.error_text.insert(tk.END, '暂无报错记录')
-        self.error_frame.grid(row=1, column=1,sticky='nsew')
-        self.score_frame.grid_forget()
-        self.main_frame.grid_forget()
-        self.vido_frame.grid_forget()
-        self.set_frame.grid_forget()
-        self.help_frame.grid_forget()
-        self.money_frame.grid_forget()
+        self.show_frame(self.error_frame)
         self.error_text.configure(state=tk.DISABLED)
 
     def show_set(self):
         self.select_frame_by_name('设置')
-        self.set_frame.grid(row=1, column=1,sticky='nsew')
-        self.error_frame.grid_forget()
-        self.score_frame.grid_forget()
-        self.main_frame.grid_forget()
-        self.vido_frame.grid_forget()
-        self.help_frame.grid_forget()
-        self.money_frame.grid_forget()
+        self.show_frame(self.set_frame)
 
     def show_money(self):
         self.select_frame_by_name('赞助作者')
-        self.money_frame.grid(row=1, column=1)
-        self.error_frame.grid_forget()
-        self.score_frame.grid_forget()
-        self.main_frame.grid_forget()
-        self.vido_frame.grid_forget()
-        self.set_frame.grid_forget()
-        self.help_frame.grid_forget()
+        self.show_frame(self.money_frame)
+
+    def show_help(self):
+        self.select_frame_by_name('帮助')
+        self.show_frame(self.help_frame)
 
     def select_file(self):
         file_path = filedialog.askopenfilename(title="选择文件", filetypes=[("", "*.exe")])
         if file_path:
             self.chrome_driver_entry.delete(0, tk.END)
             self.chrome_driver_entry.insert(tk.END,file_path)
-
-    def show_help(self):
-        self.select_frame_by_name('帮助')
-        self.help_frame.grid(row=1, column=1,sticky='nsew')
-        self.set_frame.grid_forget()
-        self.error_frame.grid_forget()
-        self.score_frame.grid_forget()
-        self.main_frame.grid_forget()
-        self.vido_frame.grid_forget()
-        self.money_frame.grid_forget()
 
     def run_program(self,file_name):
         self.fold_frame()
@@ -697,7 +656,7 @@ class Start:
             except Exception as e:
                 self.text_box.insert(tk.END, f"关闭失败: {e}\n")
             finally:
-                process = None
+                self.process = None
 
     # 每秒更新 GUI 中的时间显示
     def update_time(self):
