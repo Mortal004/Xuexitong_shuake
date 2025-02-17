@@ -8,32 +8,7 @@ from task.tool import color
 import pyautogui
 from selenium.webdriver.common.by import By
 
-def vido_question():
-    i=1
-    while i<3:
-        try:
-            img_Ture = pyautogui.locateOnScreen(r'task\img\img_Ture.png', confidence=0.9)
-            img_False = pyautogui.locateOnScreen(r'task\img\img_False.png', confidence=0.9)
-            img_submit = pyautogui.locateOnScreen(r'task\img\img_submit.png', confidence=0.8)
-        except pyautogui.ImageNotFoundException:
-            return
-        if i==1:
-            print(color.green('已检测到视频中有题目'),flush=True)
-            pyautogui.click(img_Ture, duration=0.4)
-            print(color.green('第一次答题完毕'),flush=True)
-        elif i==2:
-            pyautogui.click(img_False, duration=0.4)
-            print(color.green('第二次答题完毕'),flush=True)
-        # 提交
-        pyautogui.click(img_submit, duration=0.4)
-        pyautogui.move(0, -50)
-        time.sleep(2)
-        i+=1
-
-def video_question1(driver,vido_iframe):
-    driver.switch_to.default_content()
-    driver.switch_to.frame('iframe')
-    driver.switch_to.frame(vido_iframe)
+def video_question(driver):
     k=0
     while k<4:
         try:
@@ -85,7 +60,6 @@ def study_page(driver,course_name):
                 element.click()
             except:
                 pass
-            #待完善
             try:
                 print(color.blue('调节音量'), flush=True)
                 element = driver.find_element(By.XPATH, '//*[@id="video"]/div[6]/div[6]')
@@ -93,6 +67,10 @@ def study_page(driver,course_name):
                 print(color.green('调节成功'), flush=True)
             except:
                 print(color.yellow('未找到音量，或已经调节'), flush=True)
+            time.sleep(1)
+            element=driver.find_element(By.CLASS_NAME,'vjs-duration-display')
+            total_time=element.text
+            print(color.green(f'该视频总时长为：{total_time}'),flush=True)
             print(color.yellow('请不要将鼠标移动至浏览器窗口外，或将窗口最小化，这都有可能导致视频暂停，现在鼠标左右移动是正常的，目的是为了防止熄屏'),flush=True)
             driver.switch_to.default_content()
             driver.switch_to.frame('iframe')
@@ -109,15 +87,19 @@ def study_page(driver,course_name):
                     cond=True
                     break
                 else:
-                    video_question1(driver,vido_iframe)
-                    pyautogui.move(20,0,)
-                    time.sleep(1)
+                    pyautogui.move(20, 0, )
+                    driver.switch_to.default_content()
+                    driver.switch_to.frame('iframe')
+                    driver.switch_to.frame(vido_iframe)
+                    video_question(driver)
+                    element=driver.find_element(By.CLASS_NAME,'vjs-current-time-display')
+                    current_time=element.text
+                    if current_time==total_time:
+                        driver.find_element(By.CSS_SELECTOR,'[class="vjs-play-control vjs-control vjs-button vjs-paused vjs-ended"]').click()
+                        print(color.yellow('视频已播放完毕，但任务点仍未完成，开始重播'),flush=True)
                     pyautogui.move(-20,0)
-                    continue
         driver.switch_to.default_content()
         driver.switch_to.frame('iframe')
-        # pyautogui.scroll(-250)
-        # print('第{}个视频已完成'.format(i+1))
     print(color.green('所有视频均已完成'),flush=True)
     if cond and judge_active(driver):
         save_vido(driver,course_name)
@@ -146,6 +128,3 @@ def judge_active(driver):
         return False
 
 
-
-if __name__ == '__main__':
-    vido_question()
