@@ -132,7 +132,7 @@ class Start:
         # ---------------- 主页 ----------------
         # 启动程序按钮
         self.start_button = ctk.CTkButton(self.main_frame, text="启动程序",height=40, border_spacing=10,fg_color=self.button_color,
-                                          command=lambda: self.run_program(['Main.exe']), font=self.font,hover_color=self.button_hover_color)
+                                          command=lambda: self.run_program(['python','main.py']), font=self.font,hover_color=self.button_hover_color)
         # self.button1.config(image=self.img)
         self.start_button.grid(row=0, column=0,padx=5, pady=10)
         # 关闭程序按钮
@@ -303,7 +303,7 @@ class Start:
         self.question_label.grid(row=4, column=1, padx=5, pady=5, sticky=tk.W)
         self.question_options = ["大学生搜题酱", "DeepSeek AI","不刷题"]
         self.question_entry = ctk.CTkComboBox(self.message_set_frame, values=self.question_options, font=self.font,
-                                              button_color=self.button_color,state = 'readonly',
+                                              button_color=self.button_color,state = 'readonly',command=self.money,
                                               button_hover_color=self.button_hover_color,
                                               dropdown_fg_color=self.frame_fg_color,
                                               dropdown_hover_color=self.button_color,
@@ -313,15 +313,17 @@ class Start:
         #倍速设置：复选框
         self.speed = ['1', '2', '3', '4', '5', '6','8','16']
         self.speed_label = ttk.Label(self.message_set_frame, text="倍速设置：", font=self.font)
-        self.speed_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
+        self.speed_label.grid(row=6, column=1, padx=5, pady=5, sticky=tk.W)
         self.speed_entry = ctk.CTkComboBox(self.message_set_frame, values=self.speed, font=self.font,command=self.hint,
                                            button_color=self.button_color, button_hover_color=self.button_hover_color,
                                            dropdown_fg_color=self.frame_fg_color,
                                            dropdown_hover_color=self.button_color,
                                            )
-        self.speed_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
+        self.speed_entry.grid(row=6, column=2, padx=5, pady=5, sticky=tk.W)
         self.speed_entry.configure(state = 'readonly')
-
+        #API
+        self.API_label = ttk.Label(self.message_set_frame, text="API:", font=self.font)
+        self.API_entry = ctk.CTkEntry(self.message_set_frame, font=self.font, show='*')
         self.combobox_lst=[ self.change_theme,self.speed_entry,self.question_entry,self.cour_entry,self.size_entry,
                             self.font_entry, self.browser_entry,self.course_score_entry,self.course_vido_entry]
         # 创建保存按钮
@@ -344,7 +346,7 @@ class Start:
         self.help_txt.configure(state=tk.DISABLED)
 
         #----------------赞助页面----------------
-        self.label1 = ctk.CTkLabel(self.money_frame, text="如果对您有帮助，欢迎给我打赏,各位的支持就是我更新的最大动力\n(PS:会优先解决打赏的人出现的问题哦！)", font=self.font,fg_color='transparent')
+        self.label1 = ctk.CTkLabel(self.money_frame, text="如果对您有帮助，欢迎给我打赏,各位的支持就是我更新的最大动力\n(PS:会优先解决打赏的人出现的问题哦！)\n邮箱地址：2022865286@qq.com", font=self.font,fg_color='transparent')
         self.label1.grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky=tk.W)
         # 加载图片
         self.image = Image.open(r"task/img/money.png")
@@ -358,6 +360,15 @@ class Start:
         self.update_time()
         self.load_data()
         self.show_main()
+
+    def money(self,choice):
+        if choice=='DeepSeek AI':
+            self.API_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
+            self.API_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
+            tk.messagebox.showinfo('提示', '请输入Deepseek API\n如果您自己并未购买API，请前往赞助作者页面对作者进行赞赏，并发送作者邮件获取API')
+        else:
+            self.API_label.grid_forget()
+            self.API_entry.grid_forget()
 
     def select_frame_by_name(self, name):
         # set button color for selected button
@@ -741,10 +752,16 @@ class Start:
             self.account_info['speed']=self.speed_entry.get()
         self.account_info['font_type'] = self.font_entry.get()
         self.account_info['font_size'] = self.size_entry.get()
-        if self.question_entry.get() != '不刷题':
-            self.result = tk.messagebox.askokcancel('确认保存', '你确定要保存吗？\n(注意：搜题暂时只能搜索选择题和判断题)')
+        if self.question_entry.get() == 'DeepSeek AI':
+            if self.API_entry.get()=='':
+                tk.messagebox.showerror('警告', message='请填写DeepSeek API\n如果您自己并未购买API，请前往赞助作者页面对作者进行赞赏，并发送作者邮件获取API')
+                return False
+            else:
+                self.account_info['API'] = self.API_entry.get()
+        if self.question_entry.get() == '大学生搜题酱':
+            self.result = tk.messagebox.askokcancel('确认保存', '你确定要保存吗？\n(注意：搜题暂时只能搜索选择题和判断题\n使用DeepSeek可支持全题型作答)')
         else:
-            self.result = tk.messagebox.askokcancel('确认保存', '你确定要保存吗？')
+            self.result = tk.messagebox.askokcancel('确认保存', '你确定要保存吗？\n(使用DeepSeek可支持全题型作答)')
         if self.result:
             tk.messagebox.showinfo('', '保存成功')
             with open(r'task\tool\account_info.json', 'w', encoding='utf-8') as f:
@@ -772,6 +789,7 @@ class Start:
                 self.password_entry.insert(0, self.account_info['password'])
                 self.cour_entry.set( self.account_info['cour'])
                 self.question_entry.set( self.account_info['choice'])
+                self.API_entry.insert(0, self.account_info['API'])
 
                 try:
                     self.font_entry.set(self.account_info['font_type'])
