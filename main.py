@@ -55,11 +55,11 @@ def login_study(driver,phone_number,password):
     #点击课程
     try:
         driver.find_element(By.CSS_SELECTOR, '[title="新泛雅"]').click()
-        time.sleep(2)
+        time.sleep(1)
     except:
         try:
             driver.find_element(By.CSS_SELECTOR,'[title="课程"]').click()
-            time.sleep(2)
+            time.sleep(1)
         except:
             pass
     try:
@@ -145,13 +145,13 @@ def choice_course(driver, course_name,speed,condition):
             print(color.green(f'您已选择观看《{course_name}》'), flush=True)
             #体验最新版本
             try:
+                turn_page(driver,course_name)
                 element=driver.find_element(By.CLASS_NAME,'experience')
-                time.sleep(2)
+                time.sleep(1)
                 element.click()
                 print(color.green('正在体验最新版本'),flush=True)
                 # 遍历所有窗口句柄
-                turn_page(driver,'课程')
-                choice_course(driver,course_name,speed,False)
+                # choice_course(driver,course_name,speed,False)
             except:
                 pass
 
@@ -250,7 +250,7 @@ def page_message(driver):
         pass
     return page_message_lst
 
-def run(driver,choice,course_name):
+def run(driver,choice,course_name,API):
     while True:
         print(color.green('正在检测页面内容'), flush=True)
         page_message_lst=page_message(driver)
@@ -274,7 +274,7 @@ def run(driver,choice,course_name):
                             if choice=='大学生搜题酱':
                                 get_question_date(driver,course_name,test_frame)
                             elif choice=='DeepSeek AI':
-                                Answer(driver,test_frame,course_name)
+                                Answer(driver,test_frame,course_name,API)
                         except Exception as e:
                             error_msg = traceback.format_exc()
                             send_error(error_msg)
@@ -297,7 +297,7 @@ def run(driver,choice,course_name):
         time.sleep(1)
 
 
-def main(phone_number,password,course_name,choice,speed):
+def main(phone_number,password,course_name,choice,speed,API):
     with open(r'task\tool\account_info.json', 'r', encoding='utf-8') as f:
         browser_info = json.load(f)
     # 设置ChromeDriver的路径
@@ -312,6 +312,7 @@ def main(phone_number,password,course_name,choice,speed):
     # 创建Driver服务
     service = Service(driver_path)
     options = Options()
+    options.add_argument("--disable-blink-features=AutomationControlled")  # 禁用自动化控制提示
     options.add_extension(r"task\tool\speed.crx")
     if choice=='大学生搜题酱':
         # 可以设置Chrome启动选项（如果需要）
@@ -335,14 +336,14 @@ def main(phone_number,password,course_name,choice,speed):
     find_mission(driver)
     turn_page(driver,'学生学习页面')
     fold(driver)
-    run(driver,choice,course_name)
+    run(driver,choice,course_name,API)
 
 if __name__ == '__main__':
     try:
         with open(r'task\tool\account_info.json', 'r', encoding='utf-8') as fil:
             account_info = json.load(fil)
             try:
-                main(account_info['phone_number'],account_info['password'],account_info['cour'],account_info['choice'],account_info['speed'])
+                main(account_info['phone_number'],account_info['password'],account_info['cour'],account_info['choice'],account_info['speed'],account_info['API'])
             except NoSuchWindowException as e:
                 print(color.red('窗口意外关闭'),flush=True)
             except NoSuchDriverException as e:

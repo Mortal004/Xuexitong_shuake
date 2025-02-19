@@ -21,6 +21,12 @@ def video_question(driver):
             #提交
             submit=element.find_element(By.ID,'videoquiz-submit')
             submit.click()
+            #继续学习
+            try:
+                continue_learn=element.find_element(By.ID,'videoquiz-continue')
+                continue_learn.click()
+            except:
+                pass
         except:
             break
 
@@ -71,9 +77,10 @@ def study_page(driver,course_name):
             element=driver.find_element(By.CLASS_NAME,'vjs-duration-display')
             total_time=element.text
             print(color.green(f'该视频总时长为：{total_time}'),flush=True)
-            print(color.yellow('请不要将鼠标移动至浏览器窗口外，或将窗口最小化，这都有可能导致视频暂停，现在鼠标左右移动是正常的，目的是为了防止熄屏'),flush=True)
+            print(color.yellow('请不要将窗口最小化，这有可能导致脚本异常，现在鼠标左右移动是正常的，目的是为了防止熄屏'),flush=True)
             driver.switch_to.default_content()
             driver.switch_to.frame('iframe')
+            last_time=0
             # 判断是否完成任务
             while True:
                 driver.switch_to.default_content()
@@ -87,6 +94,7 @@ def study_page(driver,course_name):
                     cond=True
                     break
                 else:
+                    time.sleep(1)
                     pyautogui.move(20, 0, )
                     driver.switch_to.default_content()
                     driver.switch_to.frame('iframe')
@@ -94,6 +102,10 @@ def study_page(driver,course_name):
                     video_question(driver)
                     element=driver.find_element(By.CLASS_NAME,'vjs-current-time-display')
                     current_time=element.text
+                    if last_time==current_time and current_time!='':
+                        print(color.red(f'当前视频播放被暂停,点击继续播放'),flush=True)
+                        driver.find_element(By.CSS_SELECTOR,'[class="vjs-play-control vjs-control vjs-button vjs-paused"]').click()
+                    last_time=current_time
                     if current_time==total_time:
                         driver.find_element(By.CSS_SELECTOR,'[class="vjs-play-control vjs-control vjs-button vjs-paused vjs-ended"]').click()
                         print(color.yellow('视频已播放完毕，但任务点仍未完成，开始重播'),flush=True)
