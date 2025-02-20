@@ -115,7 +115,7 @@ class Answer:
         return response.choices[0].message.content
 
     def finish_title(self):
-        dit = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+        dit = {'A': 0, 'B': 1, 'C': 2, 'D': 3,'E':4,'F':5,'G':6,'H':7,'I':8,'J':9}
         print(color.green('开始答题'),flush=True)
         i=0
         j=0

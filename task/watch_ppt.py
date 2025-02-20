@@ -4,8 +4,8 @@
 # For more information, see the LICENSE file in the root directory of this project.
 
 import time
-import pyautogui
 from selenium.webdriver.common.by import By
+
 from task.tool import color
 
 
@@ -19,10 +19,27 @@ def __ppt(driver):
         ppt_num=len(ppt_iframes)
     print(color.green(f'已检测到{ppt_num}个PPT'), flush=True)
     for num in range(ppt_num):
+        ppt_iframe = ppt_iframes[num]
+        try:
+            # 定位到该元素的前一个兄弟元素
+            ppt_iframe.find_element(By.XPATH, "preceding-sibling::div[1]")
+            print(color.green("该PPT存在任务点"), flush=True)
+        except:
+            print(color.green("该PPT不存在任务点"), flush=True)
+            continue
+        #检查任务点是否已完成
+        # 定位到该元素的上一级（父元素）
+        parent_element = ppt_iframe.find_element(By.XPATH, "..")
+        # 获取 parent_element 的class值
+        parent_element_class = parent_element.get_attribute("class")
+        if parent_element_class == 'ans-attach-ct ans-job-finished':
+            print(color.green("该PPT已完成"), flush=True)
+            continue
+        else:
+            print(color.green("该PPT未完成"), flush=True)
         driver.switch_to.default_content()
         driver.switch_to.frame(driver.find_element(By.CSS_SELECTOR, '[id="iframe"]'))
         print(color.green(f'开始播放第{num + 1}个PPT'), flush=True)
-        ppt_iframe = ppt_iframes[num]
         # 滚动到PPT
         driver.execute_script("arguments[0].scrollIntoView();", ppt_iframe)
         driver.switch_to.frame(ppt_iframe)

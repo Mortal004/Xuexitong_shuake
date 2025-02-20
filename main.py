@@ -38,6 +38,7 @@ def login_study(driver,phone_number,password):
     # 打开网页
     driver.get("https:i.chaoxing.com/")
     turn_page(driver,'用户登录')
+    print(color.green('正在登录中...'), flush=True)
     # 自动登录
     element = driver.find_element(By.ID, 'phone')
     element1 = driver.find_element(By.ID, 'pwd')
@@ -79,7 +80,7 @@ def login_study(driver,phone_number,password):
                 element.click()
                 break
         element.click()
-        time.sleep(3)
+        time.sleep(1)
     except:
         pass
 
@@ -126,6 +127,7 @@ def choice_course(driver, course_name,speed,condition):
     返回:
     无
     """
+    print(color.green(f'正在定位《{course_name}》课程...'))
     # 查找所有课程名称元素
     course_elements = driver.find_elements(By.CLASS_NAME, 'course-name')
     if len(course_elements)==0:
@@ -250,7 +252,7 @@ def page_message(driver):
         pass
     return page_message_lst
 
-def run(driver,choice,course_name,API):
+def run(driver,choice,course_name,API,lock_screen):
     while True:
         print(color.green('正在检测页面内容'), flush=True)
         page_message_lst=page_message(driver)
@@ -261,7 +263,7 @@ def run(driver,choice,course_name,API):
             if 'ppt' in page_message_lst:
                 __ppt(driver)
             if 'vido' in page_message_lst:
-                study_page(driver,course_name)
+                study_page(driver,course_name,lock_screen)
             if 'test' in page_message_lst:
                 if choice!='不刷题':
                     driver.switch_to.default_content()
@@ -297,7 +299,8 @@ def run(driver,choice,course_name,API):
         time.sleep(1)
 
 
-def main(phone_number,password,course_name,choice,speed,API):
+def main(phone_number,password,course_name,choice,speed,API,lock_screen):
+    print(color.green('启动浏览器中...'), flush=True)
     with open(r'task\tool\account_info.json', 'r', encoding='utf-8') as f:
         browser_info = json.load(f)
     # 设置ChromeDriver的路径
@@ -331,19 +334,19 @@ def main(phone_number,password,course_name,choice,speed,API):
     driver.implicitly_wait(2)
     set_speed_extension(driver,browser)
     login_study(driver,phone_number,password)
-    # set_speed(speed,driver)
     choice_course(driver,course_name,speed,True)
     find_mission(driver)
     turn_page(driver,'学生学习页面')
     fold(driver)
-    run(driver,choice,course_name,API)
+    run(driver,choice,course_name,API,lock_screen)
 
 if __name__ == '__main__':
     try:
         with open(r'task\tool\account_info.json', 'r', encoding='utf-8') as fil:
             account_info = json.load(fil)
             try:
-                main(account_info['phone_number'],account_info['password'],account_info['cour'],account_info['choice'],account_info['speed'],account_info['API'])
+                main(account_info['phone_number'],account_info['password'],account_info['cour'],
+                     account_info['choice'],account_info['speed'],account_info['API'],account_info['lock_screen'])
             except NoSuchWindowException as e:
                 print(color.red('窗口意外关闭'),flush=True)
             except NoSuchDriverException as e:

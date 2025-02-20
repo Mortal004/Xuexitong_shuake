@@ -311,7 +311,7 @@ class Start:
         # self.question_entry.configure(state = 'readonly')
         self.question_entry.grid(row=4, column=2, padx=5, pady=5, sticky=tk.W)
         #倍速设置：复选框
-        self.speed = ['1', '2', '3', '4', '5', '6','8','16']
+        self.speed = ['1', '2', '3', '4', '5', '6','8','10','16']
         self.speed_label = ttk.Label(self.message_set_frame, text="倍速设置：", font=self.font)
         self.speed_label.grid(row=6, column=1, padx=5, pady=5, sticky=tk.W)
         self.speed_entry = ctk.CTkComboBox(self.message_set_frame, values=self.speed, font=self.font,command=self.hint,
@@ -324,6 +324,12 @@ class Start:
         #API
         self.API_label = ttk.Label(self.message_set_frame, text="API:", font=self.font)
         self.API_entry = ctk.CTkEntry(self.message_set_frame, font=self.font, show='*')
+        #防锁屏
+        self.lock_screen_label = ttk.Label(self.message_set_frame, text="防锁屏：", font=self.font)
+        self.lock_screen_label.grid(row=7, column=1, padx=5, pady=5, sticky=tk.W)
+        self.lock_screen_check = ctk.CTkSwitch(self.message_set_frame, text="", bg_color=self.frame_fg_color,
+                                            font=self.font)
+        self.lock_screen_check.grid(row=7, column=2, sticky=tk.W)
         self.combobox_lst=[ self.change_theme,self.speed_entry,self.question_entry,self.cour_entry,self.size_entry,
                             self.font_entry, self.browser_entry,self.course_score_entry,self.course_vido_entry]
         # 创建保存按钮
@@ -752,6 +758,7 @@ class Start:
             self.account_info['speed']=self.speed_entry.get()
         self.account_info['font_type'] = self.font_entry.get()
         self.account_info['font_size'] = self.size_entry.get()
+        self.account_info['lock_screen'] = self.lock_screen_check.get()
         if self.question_entry.get() == 'DeepSeek AI':
             if self.API_entry.get()=='':
                 tk.messagebox.showerror('警告', message='请填写DeepSeek API\n如果您自己并未购买API，请前往赞助作者页面对作者进行赞赏，并发送作者邮件获取API')
@@ -790,7 +797,6 @@ class Start:
                 self.cour_entry.set( self.account_info['cour'])
                 self.question_entry.set( self.account_info['choice'])
                 self.API_entry.insert(0, self.account_info['API'])
-
                 try:
                     self.font_entry.set(self.account_info['font_type'])
                     self.size_entry.set(self.account_info['font_size'])
