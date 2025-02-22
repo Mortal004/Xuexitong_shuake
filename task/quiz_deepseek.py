@@ -60,10 +60,11 @@ class Answer:
                 self.questionType =self. title[self.title.find("【") + 1: self.title.find("】")]
                 if self.questionType=='单选题' or self.questionType=='多选题' or self.questionType=='判断题':
                     self.optionWebElementList.append( self.title_and_option_element.find_elements(By.TAG_NAME, 'li'))
+                    self.all_title_list.append(self.title_and_option_text)
                 else:
+                    self.all_title_list.append(self.title)
                     self.optionWebElementList.append(None)
                 self.all_title += self.title_and_option_text + '\n'
-                self.all_title_list.append(self.title_and_option_text)
                 self.questionType_list.append(self.questionType)
             self.prompt = '''请根据以下题目要求回答问题：
                                    1.不要其他话语，我仅仅需要这些题目的选择答案哟
@@ -72,7 +73,7 @@ class Answer:
 
              3.对于判断题，答案只能是 A 或 B，分别对应题目中的 A（对） 和 B（错）。
             
-             4.简答题只需给出答案即可,不要有多余的内容,论述题同样，论述题的答案字数在五十字左右,不要出现字母
+             4.简答题只需给出文字答案即可,不要有多余的内容,论述题同样，论述题的答案字数在五十字左右,不要出现字母或题号数字
             
              5.填空题的每个答案用“,”隔开
             
@@ -89,7 +90,7 @@ class Answer:
             self.prompt += self.all_title
             print(color.blue('正在使用deepseek搜索该测试所有题目答案...'), flush=True)
             try:
-                # all_answer = 'A/A/你,好/啊啊啊,n'
+                # all_answer = 'A/你,你/你,你,你/你,你/你,你/你,你/A/ni/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/你,你/你,你,你/你,你/你,你/你,你,你,你,你,你,/你，你/'
                 all_answer = self.DeepSeekAsk(self.prompt, 1.3)
             except:
                 print(color.red('系统繁忙，请稍后再试'), flush=True)
@@ -115,12 +116,12 @@ class Answer:
         return response.choices[0].message.content
 
     def finish_title(self):
-        dit = {'A': 0, 'B': 1, 'C': 2, 'D': 3,'E':4,'F':5,'G':6,'H':7,'I':8,'J':9}
+        dit = {'A': 0, 'B': 1, 'C': 2, 'D': 3,'E':4,'F':5,'G':6,'H':7}
         print(color.green('开始答题'),flush=True)
-        i=0
-        j=0
+        k=0
         ans_num=0
         for num,answer in self.answer_dict.items():
+            num=num-k
             # 滚动到题目
             self.driver.execute_script("arguments[0].scrollIntoView();", self.titleWebElementList[num])
             pyautogui.scroll(50)
@@ -128,6 +129,9 @@ class Answer:
             print(color.green(f'正在回答第{num+1}题...\n{self.all_title_list[num]}'), flush=True)
             time.sleep(1)
             if self.questionType_list[num]=='单选题' or self.questionType_list[num]=='判断题':
+                if answer not in ['A', 'B', 'C', 'D', 'E', 'F', 'G','H']:
+                    k += 1
+                    continue
                 self.optionWebElementList[num][dit.get(answer)].click()
                 ans_num+=1
             elif self.questionType_list[num]=='多选题':
@@ -136,7 +140,11 @@ class Answer:
                     self.optionWebElementList[num][dit.get(ans)].click()
                 ans_num+=1
             elif self.questionType_list[num]=='简答题' or self.questionType_list[num]=='论述题' or self.questionType_list[num]=='名词解释':
-                text_frame=self.driver.find_element(By.ID,f'ueditor_{i}')
+                i = 0
+                if answer in ['A','B','C','D','E','F','G']:
+                    k+=1
+                    continue
+                text_frame=self.questionList0[num].find_element(By.TAG_NAME,'iframe')
                 self.driver.switch_to.frame(text_frame)
                 p_element=self.driver.find_element(By.TAG_NAME,'p')
                 # self.driver.execute_script('arguments[0].innerText = arguments[1];', p_element, answer)
@@ -146,18 +154,24 @@ class Answer:
                 i+=1
                 ans_num+=1
             elif self.questionType_list[num]=='填空题':
+                j = 0
+                if answer in ['A','B','C','D','E','F','G']:
+                    k+=1
+                    continue
                 answer=answer.split(',')
-                elements = self.driver.find_elements(By.CLASS_NAME, 'InpDIV')
+                elements = self.questionList0[num].find_elements(By.CLASS_NAME, 'InpDIV')
+                text_frames = self.questionList0[num].find_elements(By.TAG_NAME, 'iframe')
                 for ans in answer:
-                    elements[j].click()
-                    text_frame = self.driver.find_element(By.ID, f'ueditor_{i}')
-                    self.driver.switch_to.frame(text_frame)
+                    self.driver.execute_script("arguments[0].click();", elements[j])
+                    self.driver.switch_to.frame(text_frames[j])
                     p_element = self.driver.find_element(By.TAG_NAME, 'p')
-                    p_element.click()
+                    try:
+                        p_element.click()
+                    except:
+                        self.driver.execute_script("arguments[0].click();", p_element)
                     p_element.send_keys(ans)
                     self.driver.switch_to.parent_frame()
                     time.sleep(1)
-                    i+=1
                     j+=1
                 ans_num+=1
             else:
