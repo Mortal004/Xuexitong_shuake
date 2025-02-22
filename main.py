@@ -114,7 +114,6 @@ def set_speed_extension(driver,browser):
     element.clear()
     element.send_keys('1')
 
-
 def choice_course(driver, course_name,speed,condition):
     # time.sleep(200)
     """
@@ -127,7 +126,7 @@ def choice_course(driver, course_name,speed,condition):
     返回:
     无
     """
-    print(color.green(f'正在定位《{course_name}》课程...'))
+    print(color.green(f'正在定位《{course_name}》课程...'),flush=True)
     # 查找所有课程名称元素
     course_elements = driver.find_elements(By.CLASS_NAME, 'course-name')
     if len(course_elements)==0:
@@ -180,6 +179,7 @@ def choice_course(driver, course_name,speed,condition):
         if element.text== '章节':
             element.click()
             break
+
 def find_mission(driver):
     # 切换到名为 frame_content-zj 的 iframe
     driver.switch_to.frame("frame_content-zj")
@@ -206,11 +206,11 @@ def turn_page(driver,page_name):
             break
 
     #折叠侧边目录
+
 def fold(driver):
     element = driver.find_element(By.XPATH, '//*[@id="selector"]/div[2]')
     element.click()
     time.sleep(1)
-
 
 def set_speed(speed,driver):
     print(color.blue(f'调节倍数为：{speed}X'), flush=True)
@@ -297,7 +297,6 @@ def run(driver,choice,course_name,API,lock_screen):
         except:
             pass
         time.sleep(1)
-
 
 def main(phone_number,password,course_name,choice,speed,API,lock_screen):
     print(color.green('启动浏览器中...'), flush=True)
