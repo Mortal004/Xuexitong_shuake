@@ -45,7 +45,6 @@ class Start:
         self.record_color_lst= ['blue']
         self.root = ctk.CTk()
         ctk.set_appearance_mode("light")
-
         self.root.geometry("+1290+20")  # 设置窗口大小
         self.root.title('学习通刷课')
         # 初始设定窗口置顶
@@ -67,6 +66,7 @@ class Start:
         self.menu_image = ctk.CTkImage(light_image=Image.open(r"task\img\menu.png"), size=(30, 30))
         self.fold_image = ctk.CTkImage(light_image=Image.open(r"task\img\fold.png"), size=(15, 30))
         self.open_image = ctk.CTkImage(light_image=Image.open(r"task\img\open.png"), size=(15, 30))
+        self.show_image = ctk.CTkImage(light_image=Image.open(r"task\img\show.png"), size=(15, 10))
         self.image_name_list = ['home_dark.png','set.png','help.png','vido.png','score.png','error.png','give_money.png']
         self.image_list = ['home_image','set_image','help_image','vido_image','score_image','error_image','money_image']
         for i in range(len(self.image_name_list)):
@@ -132,7 +132,7 @@ class Start:
         # ---------------- 主页 ----------------
         # 启动程序按钮
         self.start_button = ctk.CTkButton(self.main_frame, text="启动程序",height=40, border_spacing=10,fg_color=self.button_color,
-                                          command=lambda: self.run_program(['python','main.py']), font=self.font,hover_color=self.button_hover_color)
+                                          command=lambda: self.start(['python','main.py']), font=self.font,hover_color=self.button_hover_color)
         # self.button1.config(image=self.img)
         self.start_button.grid(row=0, column=0,padx=5, pady=10)
         # 关闭程序按钮
@@ -238,7 +238,7 @@ class Start:
         # Chrome driver
         self.chrome_driver_label = ttk.Label(self.configuration_set_frame, text="驱动地址:",font=self.font)
         self.chrome_driver_label.grid(row=1, column=1, padx=5, pady=10, sticky=tk.W)
-        self.chrome_driver_entry = ctk.CTkEntry(self.configuration_set_frame,width=300)
+        self.chrome_driver_entry = ctk.CTkEntry(self.configuration_set_frame)
         self.chrome_driver_entry.grid(row=1, column=2, padx=5, pady=10, sticky=tk.W)
         self.open_file_button = ctk.CTkButton(self.configuration_set_frame, text="选择文件",
                                               fg_color=self.button_color, command=self.select_file,
@@ -269,15 +269,15 @@ class Start:
         self.size_entry.grid(row=2, column=2, padx=5, pady=5, sticky=tk.W)
         # 窗口置顶勾选框
         self.topmost_label=ttk.Label(self.frame_set_frame, text="窗口置顶：", font=self.font)
-        self.topmost_label.grid(row=3, column=1, padx=5, pady=5, sticky=tk.W)
+        self.topmost_label.grid(row=3, column=1, padx=5, pady=5, sticky=tk.W+tk.N)
 
         self.topmost_check = ctk.CTkSwitch(self.frame_set_frame, text="",bg_color=self.frame_fg_color,
                                             command=self.toggle_topmost,font=self.font)
-        self.topmost_check.grid(row=3,column=2,sticky=tk.W)
+        self.topmost_check.grid(row=3,column=2,sticky=tk.W+tk.N)
         self.topmost_check.select()
         #信息设置
         self.message_set_frame = ttk .LabelFrame(self.set_frame, text="信息设置：")
-        self.message_set_frame.grid(row=2,  column=0,  sticky='nsew', padx=5, pady=5)
+        self.message_set_frame.grid(row=2,  column=0, columnspan=2, sticky='nsew', padx=5, pady=5)
         # 账户：输入框
         self.phone_number_label = ttk.Label(self.message_set_frame, text="账号:", font=self.font)
         self.phone_number_label.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
@@ -288,6 +288,9 @@ class Start:
         self.password_label.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
         self.password_entry = ctk.CTkEntry(self.message_set_frame, font=self.font,show='*')
         self.password_entry.grid(row=2, column=2, padx=5, pady=5, sticky=tk.W)
+        self.show_password_button = ctk.CTkButton(self.message_set_frame, text="",fg_color='transparent',image=self.show_image,
+                                                 command=self.show_password,font=self.font,width=10,height=10)
+        self.show_password_button.grid(row=2, column=3,  pady=5, sticky=tk.W)
         # 输入框：课程
         self.cour_label = ttk.Label(self.message_set_frame, text="课程名称:", font=self.font)
         self.cour_label.grid(row=3, column=1, padx=5, pady=5, sticky=tk.W)
@@ -298,45 +301,55 @@ class Start:
                                           )
         self.cour_entry['state'] = 'normal'
         self.cour_entry.grid(row=3, column=2, padx=5, pady=5, sticky=tk.W)
+        #功能设置
+        self.function_set_frame = ttk.LabelFrame(self.set_frame, text="功能设置：")
+        self.function_set_frame.grid(row=0, column=1,rowspan=2, sticky='nsew', padx=5, pady=5)
+        self.radio_var = tk.IntVar(value=1)
+        #功能单选项
+        self.radio_button_1 = ctk.CTkRadioButton(master=self.function_set_frame, variable=self.radio_var,
+                                                           value=1,text="自动刷课答题",command=self.function_choice)
+        self.radio_button_1.grid(row=1, column=1,columnspan=2, pady=10, padx=5, sticky="w")
+        self.radio_button_2 = ctk.CTkRadioButton(master=self.function_set_frame, variable=self.radio_var,
+                                                           value=2,text="自动完成作业",command=self.function_choice)
+        self.radio_button_2.grid(row=2, column=1, pady=10,columnspan=2, padx=5, sticky="w")
+        self.radio_button_3 = ctk.CTkRadioButton(master=self.function_set_frame, variable=self.radio_var,
+                                                           value=3,text="自动完成考试",command=self.function_choice)
+        self.radio_button_3.grid(row=3, column=1, pady=10,columnspan=2, padx=5, sticky="w")
         # 刷题：输入框
-        self.question_label = ttk.Label(self.message_set_frame, text="刷题设置:", font=self.font)
-        self.question_label.grid(row=4, column=1, padx=5, pady=5, sticky=tk.W)
+        self.question_label = ttk.Label(self.function_set_frame, text="刷题设置:", font=self.font)
         self.question_options = ["大学生搜题酱", "DeepSeek AI","不刷题"]
-        self.question_entry = ctk.CTkComboBox(self.message_set_frame, values=self.question_options, font=self.font,
-                                              button_color=self.button_color,state = 'readonly',command=self.money,
+        self.question_entry = ctk.CTkComboBox(self.function_set_frame, values=self.question_options, font=self.font,
+                                              button_color=self.button_color,state = 'readonly',command=self.shua_ti_choice,
                                               button_hover_color=self.button_hover_color,
                                               dropdown_fg_color=self.frame_fg_color,
                                               dropdown_hover_color=self.button_color,
                                               )
         # self.question_entry.configure(state = 'readonly')
-        self.question_entry.grid(row=4, column=2, padx=5, pady=5, sticky=tk.W)
         #倍速设置：复选框
         self.speed = ['1', '2', '3', '4', '5', '6','8','10','16']
-        self.speed_label = ttk.Label(self.message_set_frame, text="倍速设置：", font=self.font)
-        self.speed_label.grid(row=6, column=1, padx=5, pady=5, sticky=tk.W)
-        self.speed_entry = ctk.CTkComboBox(self.message_set_frame, values=self.speed, font=self.font,command=self.hint,
+        self.speed_label = ttk.Label(self.function_set_frame, text="倍速设置：", font=self.font)
+        self.speed_entry = ctk.CTkComboBox(self.function_set_frame, values=self.speed, font=self.font,command=self.hint,
                                            button_color=self.button_color, button_hover_color=self.button_hover_color,
                                            dropdown_fg_color=self.frame_fg_color,
                                            dropdown_hover_color=self.button_color,
                                            )
-        self.speed_entry.grid(row=6, column=2, padx=5, pady=5, sticky=tk.W)
         self.speed_entry.configure(state = 'readonly')
         #API
-        self.API_label = ttk.Label(self.message_set_frame, text="API:", font=self.font)
-        self.API_entry = ctk.CTkEntry(self.message_set_frame, font=self.font, show='*')
+        self.API_label = ttk.Label(self.function_set_frame, text="API:", font=self.font)
+        self.API_entry = ctk.CTkEntry(self.function_set_frame, font=self.font, show='*')
+        self.show_api_button = ctk.CTkButton(self.function_set_frame, text="",fg_color='transparent',image=self.show_image,
+                                                 command=self.show_api,font=self.font,width=10,height=10)
         #防锁屏
-        self.lock_screen_label = ttk.Label(self.message_set_frame, text="防锁屏：", font=self.font)
-        self.lock_screen_label.grid(row=7, column=1, padx=5, pady=5, sticky=tk.W)
-        self.lock_screen_check = ctk.CTkSwitch(self.message_set_frame, text="", bg_color=self.frame_fg_color,
+        self.lock_screen_label = ttk.Label(self.function_set_frame, text="防锁屏：", font=self.font)
+        self.lock_screen_check = ctk.CTkSwitch(self.function_set_frame, text="", bg_color=self.frame_fg_color,
                                             font=self.font)
-        self.lock_screen_check.grid(row=7, column=2, sticky=tk.W)
         self.combobox_lst=[ self.change_theme,self.speed_entry,self.question_entry,self.cour_entry,self.size_entry,
                             self.font_entry, self.browser_entry,self.course_score_entry,self.course_vido_entry]
         # 创建保存按钮
         self.save_button = ctk.CTkButton(self.set_frame, text="保存", command=self.save,
                                          font=self.font,fg_color=self.button_color,
                                          hover_color=self.button_hover_color)
-        self.save_button.grid(row=3, column=0, padx=10, pady=10)
+        self.save_button.grid(row=3, columnspan=2 ,padx=10, pady=10)
         #设置网格权重
         self.set_frame.rowconfigure(3,weight=1)
         self.frame_set_frame.rowconfigure(3,weight=1)
@@ -352,7 +365,9 @@ class Start:
         self.help_txt.configure(state=tk.DISABLED)
 
         #----------------赞助页面----------------
-        self.label1 = ctk.CTkLabel(self.money_frame, text="如果对您有帮助，欢迎给我打赏,各位的支持就是我更新的最大动力\n(PS:会优先解决打赏的人出现的问题哦！)\n邮箱地址：2022865286@qq.com", font=self.font,fg_color='transparent')
+        self.label1 = ctk.CTkLabel(self.money_frame, text="如果对您有帮助，欢迎给我打赏,各位的支持就是我更新的最大动力\n"
+                                                          "(PS:会优先解决打赏的人出现的问题哦！)\n邮箱地址：2022865286@qq.com",
+                                   font=self.font,fg_color='transparent')
         self.label1.grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky=tk.W)
         # 加载图片
         self.image = Image.open(r"task/img/money.png")
@@ -366,15 +381,49 @@ class Start:
         self.update_time()
         self.load_data()
         self.show_main()
+        self.function_choice()
 
-    def money(self,choice):
+    def show_password(self):
+        if self.password_entry.cget('show') == '*':
+            self.password_entry.configure(show='')
+        else:
+            self.password_entry.configure(show='*')
+
+    def show_api(self):
+        if self.API_entry.cget('show') == '*':
+            self.API_entry.configure(show='')
+        else:
+            self.API_entry.configure(show='*')
+
+    def function_choice(self):
+        if self.radio_var.get()==1:
+            self.question_label.grid(row=4, column=1, padx=5, pady=5, sticky=tk.W)
+            self.question_entry.grid(row=4, column=2, padx=5, pady=5, sticky=tk.W)
+            if self.question_entry.get()=='DeepSeek AI':
+                self.API_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
+                self.API_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
+                self.show_api_button.grid(row=5, column=3, pady=5, sticky=tk.W)
+            self.speed_label.grid(row=7, column=1, padx=5, pady=5, sticky=tk.W)
+            self.speed_entry.grid(row=7, column=2, padx=5, pady=5, sticky=tk.W)
+            self.lock_screen_label.grid(row=8, column=1, padx=5, pady=5, sticky=tk.W)
+            self.lock_screen_check.grid(row=8, column=2, sticky=tk.W)
+        else:
+            tk.messagebox.showinfo('提示', '该功能还在开发中...,敬请期待')
+            self.radio_var.set(1)
+            self.function_choice()
+
+
+
+    def shua_ti_choice(self,choice):
         if choice=='DeepSeek AI':
             self.API_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
             self.API_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
+            self.show_api_button.grid(row=5, column=3,  pady=5, sticky=tk.W)
             tk.messagebox.showinfo('提示', '请输入Deepseek API\n如果您自己并未购买API，请前往赞助作者页面对作者进行赞赏，并发送作者邮件获取API')
         else:
             self.API_label.grid_forget()
             self.API_entry.grid_forget()
+            self.show_api_button.grid_forget()
 
     def select_frame_by_name(self, name):
         # set button color for selected button
@@ -416,99 +465,13 @@ class Start:
 
                     if version == file_name:
                         self.text_box.insert(tk.END, '当前版本为最新版本，无需更新\n')
-                        return False
                     else:
-                        self.result = tk.messagebox.askokcancel(
-                            '确认更新', '已检测到新版本，是否更新？')
-                        if self.result:
-                            self.text_box.insert(tk.END, '开始更新(大约1分钟)...\n')
-
-                            def update(thread_event):
-                                start_time = time.time()
-                                self.text_box.insert(tk.END, '下载中...\n')
-
-                                # 父级的父级目录路径
-                                grandparent_dir = os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
-                                download_path = os.path.join(grandparent_dir, file_name)  # 父级的父级目录中的下载路径
-                                try:
-                                    self.progress_bar.set(0)
-                                    self.progress_label.grid(row=2, column=0, columnspan=3, padx=10, pady=10,
-                                                             sticky=tk.W)
-                                    self.progress_bar.grid(row=2, column=1, columnspan=3, pady=10, sticky=tk.W)
-
-                                    # 下载文件到父级的父级目录
-                                    with requests.get(download_url, stream=True) as r:
-                                        r.raise_for_status()
-                                        with open(download_path, 'wb') as f:
-                                            for chunk in r.iter_content(chunk_size=8192):
-                                                f.write(chunk)
-                                    self.text_box.insert(tk.END, f'下载成功, 文件保存到 {download_path}\n')
-                                    try:
-                                        # 解压文件到父级的父级目录，保留文件夹结构
-                                        self.text_box.insert(tk.END, '开始解压...\n')
-                                        extracted_folder_name = os.path.splitext(file_name)[0]  # 假设文件名不包含复杂扩展
-                                        extraction_path = os.path.join(grandparent_dir, extracted_folder_name)
-                                        os.makedirs(extraction_path, exist_ok=True)  # 创建目标文件夹
-                                        shutil.unpack_archive(download_path, extraction_path)
-                                        os.remove(download_path)  # 删除下载的压缩文件
-                                        self.text_box.insert(tk.END, f"解压成功，文件夹路径：{extraction_path}\n")
-
-                                        # 更新版本信息
-                                        with open('task/tool/version_info', 'w') as f:
-                                            f.write(file_name)
-                                        end_time = time.time()
-                                        self.text_box.insert(tk.END,
-                                                             f"更新成功，用时 {end_time - start_time:.2f} 秒\n请关闭该脚本并前往解压后的地址使用新版本\n")
-                                        self.progress_bar.set(1)
-                                        thread_event.set()
-                                        self.progress_label.configure(text="当前进度：100.0%")
-                                        self.progress_label.update()
-                                        tk.messagebox.showinfo("提示", "请关闭该脚本并前往解压后的地址使用新版本！")
-                                    except Exception as e:
-                                        self.text_box.insert(tk.END, f"解压失败: {str(e)}\n请自行前往{download_path}解压")
-                                except Exception as e:
-                                    self.text_box.insert(tk.END,
-                                                         f"更新失败: {str(e)}\n请检查或更换网络\n或自行前往\nhttps://github.com/Mortal004/Xuexitong_shuake/releases/tag"
-                                                         "\n或夸克网盘：https://pan.quark.cn/s/eba634db1544\n或百度网盘: https://pan.baidu.com/s/1wbkc_07BqqQuwxri2WJtew?pwd=1234 下载")
-                                # 隐藏进度条
-                                    thread_event.set()
-                                self.progress_bar.grid_forget()
-                                self.progress_label.grid_forget()
-                            # 使用线程运行更新操作
-                            def fake_progress(thread_event):
-                                progress = 0
-                                while progress <= 0.99 and not thread_event.is_set():
-                                    self.progress_bar.set(progress)
-                                    self.progress_bar.update()
-                                    # 更新标签显示的进度
-                                    self.progress_label.configure(
-                                        text=f"当前进度：{progress * 100:.2f}%")
-                                    self.progress_label.update()
-                                    if progress <= 0.6:
-                                        progress += 0.0015
-                                        time.sleep(0.04)
-                                    else:
-                                        progress += 0.001
-                                        time.sleep(0.06)
-                                if "{:.2f}".format(progress*100 ) == '99.05' :
-                                    self.text_box.insert(tk.END, '当前网速较慢，请耐心等待...\n')
-                            event=threading.Event()
-                            fake_thread = threading.Thread(target=fake_progress,args=(event,))
-                            update_thread = threading.Thread(target=update,args=(event,))
-                            fake_thread.start()
-                            update_thread.start()
-                        else:
-                            self.text_box.insert(tk.END, '已取消更新\n')
-                            return False
-                else:
-                    self.text_box.insert(tk.END, "Release中没有找到文件\n")
-            else:
-                self.text_box.insert(tk.END, "Release中没有找到文件\n")
-        except requests.RequestException as e:
-            self.text_box.insert(
-                tk.END,
-                f"检查更新时发生错误: {str(e)}\n请尝试开启或关闭加速器，或者检查或更换网络\n或自行前往\nhttps://github.com/Mortal004/Xuexitong_shuake/releases/tag"
-                "\n或夸克网盘：https://pan.quark.cn/s/eba634db1544\n或百度网盘: https://pan.baidu.com/s/1wbkc_07BqqQuwxri2WJtew?pwd=1234 下载")
+                        self.text_box.insert(tk.END, '当前版本为旧版本，请前往\n'
+                                                     '夸克网盘：https://pan.quark.cn/s/eba634db1544\n'
+                                                     '或百度网盘: https://pan.baidu.com/s/1wbkc_07BqqQuwxri2WJtew?pwd=1234 下载')
+        except Exception as e:
+            self.text_box.insert(tk.END, '连接失败，请检查网络连接\n')
+            self.text_box.insert(tk.END, f'错误信息：{e}\n')
 
     def toggle_topmost(self):
         """切换窗口始终置顶属性"""
@@ -590,8 +553,13 @@ class Start:
             self.chrome_driver_entry.delete(0, tk.END)
             self.chrome_driver_entry.insert(tk.END,file_path)
 
+    def start_button_normal(self):
+        time.sleep(5)
+        self.start_button.configure(state=tk.NORMAL)
+
     def run_program(self,file_name):
         self.fold_frame()
+        self.start_button.configure(state=tk.DISABLED)
         """
         运行 main.py 程序，并将其输出实时显示在 GUI 的文本框中。
         """
@@ -661,6 +629,11 @@ class Start:
         self.thread = threading.Thread(target=read_output)
         self.thread.start()
 
+    def start(self,file_name):
+        threading.Thread(target=self.run_program,args=(file_name,)).start()
+        threading.Thread(target=self.start_button_normal).start()
+
+
     def close(self):
         self.reopen_frame()
         if self.process is not None:
@@ -698,7 +671,7 @@ class Start:
         update_font(self.root)
 
     def save_course(self):
-        content =self.cour_entry.get()
+        content =self.cour_entry.get().replace(r'\n', '')
         if content:
             data = []
             try:
@@ -745,7 +718,7 @@ class Start:
             tk.messagebox.showerror('警告', message='请填写课程名称')
             return False
         else:
-            self.account_info['cour'] = self.cour_entry.get()
+            self.account_info['cour'] = self.cour_entry.get().replace(r'\n', '')
         if self.question_entry.get() =='' :
             tk.messagebox.showerror('警告', message='请选择选择刷题设置')
             return False

@@ -9,15 +9,13 @@ import pyautogui
 from selenium.webdriver.common.by import By
 
 def video_question(driver):
-    k=0
-    while k<4:
-        try:
-            element=driver.find_element(By.CLASS_NAME,'tkTopic')
-            print(color.yellow('已检测到视频中有题目'), flush=True)
-            options=element.find_element(By.CLASS_NAME,'tkItem_ul')
-            options=options.find_elements(By.TAG_NAME,'li')
-            options[k].click()
-            k+=1
+    try:
+        element=driver.find_element(By.CLASS_NAME,'tkTopic')
+        print(color.yellow('已检测到视频中有题目'), flush=True)
+        options = element.find_element(By.CLASS_NAME,'tkItem_ul')
+        options=options.find_elements(By.TAG_NAME,'li')
+        for option in options:
+            option.click()
             #提交
             submit=element.find_element(By.ID,'videoquiz-submit')
             submit.click()
@@ -27,6 +25,15 @@ def video_question(driver):
                 continue_learn.click()
             except:
                 pass
+    except:
+        return
+
+def check_face(driver):
+    while True:
+        try:
+            driver.find_element(By.CSS_SELECTOR,"[class='popDiv1 wid640  faceCollectQrPopVideo  popClass faceRecognition_0']")
+            print(color.red('请按照要求手机扫码进行人脸认证'),flush=True)
+            time.sleep(1)
         except:
             break
 
@@ -67,6 +74,7 @@ def study_page(driver,course_name,lock_screen):
                 pass
             #点击我知道了
             driver.switch_to.default_content()
+            check_face(driver)
             driver.switch_to.frame('iframe')
             driver.switch_to.frame(vido_iframe)
             time.sleep(1)
@@ -102,7 +110,7 @@ def study_page(driver,course_name,lock_screen):
                 parent_element2_class = parent_element2.get_attribute("class")
                 txt = element2.get_attribute('aria-label')
                 if txt=='任务点已完成' or parent_element2_class=='ans-attach-ct ans-job-finished':
-                    pyautogui.scroll(-250)
+                    # pyautogui.scroll(-250)
                     print(color.green(f'已完成第{i + 1}个视频'),flush=True)
                     time_end=time.time()
                     print(color.green('总共耗费了%.2f秒.' % (time_end - time_start)),flush=True)
@@ -142,10 +150,12 @@ def save_vido(driver,course_name):
     driver.switch_to.default_content()
     element = driver.find_element(By.CLASS_NAME, 'prev_title')
     title = element.get_attribute('title')
-    f = open(fr'task\record\《{course_name}》的刷课记录.txt', 'a', encoding='utf-8')
-    f.write(
-        f'已刷完:《{title}》章节中的所有视频\n完成时间：{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))}\n\n')
-
+    try:
+        f = open(fr'task\record\《{course_name}》的刷课记录.txt', 'a', encoding='utf-8')
+        f.write(
+            f'已刷完:《{title}》章节中的所有视频\n完成时间：{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))}\n\n')
+    except:
+        pass
 def judge_active(driver):
     driver.switch_to.default_content()
     element=driver.find_element(By.CSS_SELECTOR, '[class="prev_ul clearfix"]')

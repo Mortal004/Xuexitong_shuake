@@ -2,7 +2,7 @@
 # All rights reserved.
 # This software is provided for non-commercial use only.
 # For more information, see the LICENSE file in the root directory of this project.
-
+import random
 import time
 import re
 import pyautogui
@@ -80,7 +80,8 @@ class Answer:
              6.如果题目重复出现，只需回答一次，不要重复回答。
 
              7.请严格按照题目编号顺序给出答案,1,2,3,4这样的题目序号顺序给出选择的答案。
-             每个题目的答案用“/”隔开,答案中不要题号，只需要答案，不用重复问题
+             每个题目的答案用“/”隔开,答案中不要题号，只需要答案，不用重复问题,不要给多了答案，有多少道题就给多少答案，
+             /的数量是能保持比题目数量少一个，不能多也不能少。
              
              8.最终你给出的答案格式应当类似于下面这样：A/BCD/C/'论述题答案'/D/'填空题答案1','填空题答案2',...
 
@@ -91,7 +92,7 @@ class Answer:
             print(color.blue('正在使用deepseek搜索该测试所有题目答案...'), flush=True)
             try:
                 # all_answer = 'A/你,你/你,你,你/你,你/你,你/你,你/A/ni/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/你,你/你,你,你/你,你/你,你/你,你,你,你,你,你,/你，你/'
-                all_answer = self.DeepSeekAsk(self.prompt, 1.3)
+                all_answer = self.DeepSeekAsk(self.prompt)
             except:
                 print(color.red('系统繁忙，请稍后再试'), flush=True)
                 return
@@ -103,33 +104,39 @@ class Answer:
             self.finish_title()
             self.submit()
 
-    def DeepSeekAsk(self,prompt, temperature):
-        api_key = self.API_KEY
+    def DeepSeekAsk(self,prompt):
         message = {"role": "user", "content": prompt}
-        client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+        client = OpenAI(api_key=self.API_KEY, base_url="https://api.deepseek.com")
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[message],
-            temperature=temperature,
+            temperature=1.3,
             stream=False
         )
         return response.choices[0].message.content
 
     def finish_title(self):
-        dit = {'A': 0, 'B': 1, 'C': 2, 'D': 3,'E':4,'F':5,'G':6,'H':7}
-        print(color.green('开始答题'),flush=True)
-        k=0
-        ans_num=0
-        for num,answer in self.answer_dict.items():
-            num=num-k
-            # 滚动到题目
-            self.driver.execute_script("arguments[0].scrollIntoView();", self.titleWebElementList[num])
-            pyautogui.scroll(50)
+        dit = {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7}
+        print(color.green('开始答题'), flush=True)
+        k = 0
+        ans_num = 0
+        for num, answer in self.answer_dict.items():
+            num = num - k
+            try:
+                # 滚动到题目
+                self.driver.execute_script("arguments[0].scrollIntoView();", self.titleWebElementList[num])
+                pyautogui.scroll(50)
+            except:
+                break
             print(color.green('\n<===================  分隔线  ===================>\n'),flush=True)
             print(color.green(f'正在回答第{num+1}题...\n{self.all_title_list[num]}'), flush=True)
             time.sleep(1)
+            print(color.green(f'该题为{self.questionType_list[num]}，答案：{answer}'), flush=True)
             if self.questionType_list[num]=='单选题' or self.questionType_list[num]=='判断题':
                 if answer not in ['A', 'B', 'C', 'D', 'E', 'F', 'G','H']:
+                    k += 1
+                    continue
+                if answer not in ['A','B'] and self.questionType_list[num]=='判断题':
                     k += 1
                     continue
                 self.optionWebElementList[num][dit.get(answer)].click()
@@ -154,29 +161,29 @@ class Answer:
                 i+=1
                 ans_num+=1
             elif self.questionType_list[num]=='填空题':
-                j = 0
                 if answer in ['A','B','C','D','E','F','G']:
                     k+=1
                     continue
                 answer=answer.split(',')
                 elements = self.questionList0[num].find_elements(By.CLASS_NAME, 'InpDIV')
                 text_frames = self.questionList0[num].find_elements(By.TAG_NAME, 'iframe')
-                for ans in answer:
-                    self.driver.execute_script("arguments[0].click();", elements[j])
-                    self.driver.switch_to.frame(text_frames[j])
+                for number in range(len(elements)):
+                    self.driver.execute_script("arguments[0].click();", elements[number])
+                    self.driver.switch_to.frame(text_frames[number])
                     p_element = self.driver.find_element(By.TAG_NAME, 'p')
                     try:
                         p_element.click()
                     except:
                         self.driver.execute_script("arguments[0].click();", p_element)
-                    p_element.send_keys(ans)
+                    try:
+                        p_element.send_keys(answer[number])
+                    except:
+                        pass
                     self.driver.switch_to.parent_frame()
                     time.sleep(1)
-                    j+=1
                 ans_num+=1
             else:
                 print(color.red(f'该题为{self.questionType_list[num]}，暂时无法作答'))
-            print(color.green(f'该题为{self.questionType_list[num]}，答案：{answer}'), flush=True)
         self.ans_rate=ans_num/len(self.answer_dict)
 
     def submit(self):
@@ -186,7 +193,7 @@ class Answer:
             # 点击提交
             print(color.yellow('5秒后提交'), flush=True)
             time.sleep(5)
-            self.driver.find_element(By.XPATH, '//*[@id="RightCon"]/div[2]/div/div[3]/a[2]').click()
+            self.driver.find_element(By.CSS_SELECTOR, '[class="btnSubmit workBtnIndex"]').click()
             time.sleep(1)
             # 点击确认
             self.driver.switch_to.default_content()
@@ -197,7 +204,7 @@ class Answer:
         else:
             print(color.yellow('3秒后保存'), flush=True)
             time.sleep(3)
-            self.driver.find_element(By.XPATH, '//*[@id="RightCon"]/div[2]/div/div[3]/a[1]').click()
+            self.driver.find_element(By.CSS_SELECTOR, '[class="btnSave workBtnIndex"]').click()
         return
 
     def save_score(self):
@@ -206,7 +213,10 @@ class Answer:
         self.driver.switch_to.frame('iframe')
         self.driver.switch_to.frame(self.frame)
         self.driver.switch_to.frame('frame_content')
-        f = open(fr'task\record\《{self.course_name}》的成绩记录.txt', 'a', encoding='utf-8')
+        try:
+            f = open(fr'task\record\《{self.course_name}》的成绩记录.txt', 'a', encoding='utf-8')
+        except:
+            pass
         try:
             element = self.driver.find_element(By.CSS_SELECTOR, '.achievement i')
             score = element.text

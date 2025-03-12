@@ -10,7 +10,7 @@ import traceback
 from selenium.webdriver.support import expected_conditions as EC
 import pyautogui
 from selenium.common import NoSuchDriverException, NoSuchWindowException, WebDriverException, \
-     ElementNotInteractableException
+    ElementNotInteractableException, SessionNotCreatedException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
@@ -131,10 +131,14 @@ def choice_course(driver, course_name,speed,condition):
     course_elements = driver.find_elements(By.CLASS_NAME, 'course-name')
     if len(course_elements)==0:
         course_elements = driver.find_elements(By.CLASS_NAME, 'courseName')
+    if len(course_elements)==0:
+        turn_page(driver, '个人空间')
+        driver.switch_to.frame('frame_content')
+        course_elements = driver.find_elements(By.CSS_SELECTOR, '[class="w_cour_txtH fl"]')
     # 遍历所有课程元素
     for course_element in course_elements:
         # 如果课程元素的标题属性与指定的课程名称匹配
-        if  course_name in course_element.get_attribute('title'):
+        if  course_name in course_element.get_attribute('title') or course_name in course_element.text:
             # 滚动到课程名称元素的位置
             driver.execute_script("arguments[0].scrollIntoView();", course_element)
             if condition:
@@ -158,7 +162,8 @@ def choice_course(driver, course_name,speed,condition):
 
             break
     else:
-        print(color.red(f"未找到《{course_name}》这门课程，请确认好课程名称后再试"),flush=True)
+        print(color.red(f"未找到《{course_name}》这门课程，请确认好课程名称后再试，"
+                        "或者检查账号密码是写正确，如果没有问题，请再试一次并且横屏拍摄视频发送至作者邮箱（2022865286@qq.com)"),flush=True)
         data = []
         try:
             with open('task/tool/course_name.json', 'r') as f:
@@ -173,14 +178,23 @@ def choice_course(driver, course_name,speed,condition):
             json.dump(data, f)
         sys.exit(1)
     turn_page(driver,course_name)
+
+def check_face(driver):
+    while True:
+        try:
+            driver.find_element(By.CSS_SELECTOR,"[class='popDiv wid640 faceCollectQrPop popClass']")
+            print(color.red('请按照要求手机扫码进行人脸认证'),flush=True)
+            time.sleep(1)
+        except:
+            break
+
+def find_mission(driver):
     # 点击章节标签
     elements=driver.find_elements(By.CLASS_NAME, 'nav_content')
     for element in elements:
         if element.text== '章节':
             element.click()
             break
-
-def find_mission(driver):
     # 切换到名为 frame_content-zj 的 iframe
     driver.switch_to.frame("frame_content-zj")
     try:
@@ -230,7 +244,11 @@ def set_speed(speed,driver):
 def page_message(driver):
     driver.switch_to.default_content()
     page_message_lst=[]
-    driver.switch_to.frame('iframe')
+    try:
+        iframe = driver.find_element(By.ID, 'iframe')
+        driver.switch_to.frame(iframe)
+    except:
+        return page_message_lst
     try:
         driver.find_element(By.CSS_SELECTOR, '[class="ans-attach-online ans-insertvideo-online"]')
         page_message_lst.append('vido')
@@ -280,8 +298,8 @@ def run(driver,choice,course_name,API,lock_screen):
                         except Exception as e:
                             error_msg = traceback.format_exc()
                             send_error(error_msg)
-                            print(color.yellow('出错了，具体原因请前往错误日志查看，请自行保存或提交,10秒后继续'), flush=True)
-                            time.sleep(10)
+                            print(color.yellow('出错了，具体原因请前往错误日志查看，请自行保存或提交,15秒后继续'), flush=True)
+                            time.sleep(15)
                 else:
                     print(color.yellow('跳过测试题'),flush=True)
         driver.switch_to.default_content()
@@ -334,6 +352,7 @@ def main(phone_number,password,course_name,choice,speed,API,lock_screen):
     set_speed_extension(driver,browser)
     login_study(driver,phone_number,password)
     choice_course(driver,course_name,speed,True)
+    check_face(driver)
     find_mission(driver)
     turn_page(driver,'学生学习页面')
     fold(driver)
@@ -348,8 +367,13 @@ if __name__ == '__main__':
                      account_info['choice'],account_info['speed'],account_info['API'],account_info['lock_screen'])
             except NoSuchWindowException as e:
                 print(color.red('窗口意外关闭'),flush=True)
-            except NoSuchDriverException as e:
-                print(color.red('无法正常运行驱动，请检查地址是否正确，或检查版本是否与谷歌浏览器一致'),flush=True)
+            except SessionNotCreatedException as e:
+                error_msg = traceback.format_exc()
+                send_error(
+                    "看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)" + error_msg)
+                print(color.red('无法正常运行驱动，请检查地址是否正确，或根据用户须知检查版本是否与浏览器一致，如果不一致，'
+                                '请根据用户须知的指导前往下载相应版本的驱动，如果一致，请更换另外一个浏览器，但也要注意浏览器与驱动的版本是否一致，'
+                                '如果还是不行，请重新下载脚本或关机重启。'),flush=True)
             except WebDriverException as e:
                 if 'ERR_INTERNET_DISCONNECTED' in str(e) or 'ERR_NAME_NOT_RESOLVED' in str(e):
                     print(color.red('你网都没连，刷个屁的课啊'),flush=True)
