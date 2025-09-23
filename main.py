@@ -18,7 +18,7 @@ from selenium import webdriver
 from task.tool import color
 from task.watch_ppt import __ppt
 from task.watch_vido import study_page
-from task.quiz import get_question_date
+# from task.quiz import get_question_date
 from task.quiz_deepseek  import Answer
 from task.tool.send_wx import send_error
 
@@ -64,12 +64,14 @@ def login_study(driver,phone_number,password):
         except:
             pass
     try:
+        time.sleep(3)
         driver.switch_to.frame('frame_content')
         try:
             # 体验最新版本
-            element=driver.find_element(By.CLASS_NAME,'experience')
+            element=driver.find_element(By.CSS_SELECTOR,'[class="experience fr"]')
             print(color.green('正在体验最新版本'), flush=True)
             element.click()
+            turn_page(driver,'新泛雅')
         except:
             pass
         # 选择‘我的课程’并点击
@@ -90,7 +92,12 @@ def set_speed_extension(driver,browser):
     driver.get(f'{browser}://extensions/?id=mjhlabbcmjflkpjknnicihkfnmbdfced')
     if browser=='edge':
         driver.find_element(By.ID,'itemOptions').click()
-        turn_page(driver,'extension://mjhlabbcmjflkpjknnicihkfnmbdfced/options.html')
+        driver.refresh()  # 使用 Selenium 刷新
+        time.sleep(2)
+        # 获取所有标签页句柄并切换到最新标签页
+        handles = driver.window_handles
+        driver.switch_to.window(handles[-1])  # 假设新标签页是最后一个
+        # switch_to_new_window(driver,'extension://mjhlabbcmjflkpjknnicihkfnmbdfced/options.html')
     elif browser=='chrome':
         # 等待宿主元素加载
         host_element = WebDriverWait(driver, 10).until(
@@ -107,7 +114,6 @@ def set_speed_extension(driver,browser):
         shadow_root2.find_element(By.ID,'devMode').click()
         # time.sleep(2000)
         driver.get('chrome-extension://mjhlabbcmjflkpjknnicihkfnmbdfced/options.html')
-
     elements=driver.find_elements(By.CLASS_NAME,'fieldValue')
     elements[len(elements)-1].click()
     element=driver.find_element(By.XPATH,'//*[@id="App"]/div[2]/div[2]/div[3]/div[1]/div[1]/div/div[5]/input')
@@ -184,11 +190,18 @@ def check_face(driver):
         try:
             driver.find_element(By.CSS_SELECTOR,"[class='popDiv wid640 faceCollectQrPop popClass']")
             print(color.red('请按照要求手机扫码进行人脸认证'),flush=True)
-            time.sleep(1)
+            time.sleep(2)
         except:
             break
 
 def find_mission(driver):
+    try:
+        # 体验最新版本
+        element = driver.find_element(By.CLASS_NAME, 'experience')
+        print(color.green('正在体验最新版本'), flush=True)
+        element.click()
+    except:
+        pass
     # 点击章节标签
     elements=driver.find_elements(By.CLASS_NAME, 'nav_content')
     for element in elements:
@@ -211,13 +224,18 @@ def find_mission(driver):
     element.click()
 
 def turn_page(driver,page_name):
+    time.sleep(1)
     for handle in driver.window_handles:
+        # print(len(driver.window_handles))
         # 先切换到该窗口
         driver.switch_to.window(handle)
         # 得到该窗口的标题栏字符串，判断是不是我们要操作的那个窗口
         if page_name in driver.title:
+            # print(driver.title)
             # 如果是，那么这时候WebDriver对象就是对应的该该窗口，正好，跳出循环，
             break
+        else:
+            continue
 
     #折叠侧边目录
 
@@ -232,7 +250,7 @@ def set_speed(speed,driver):
         speed=int(speed)-1
         # body = driver.find_element(By.TAG_NAME, 'div')
         # body.click()
-        for i in range(int(speed)):
+        for i in range(int(speed)*10):
             pyautogui.press('d')
             action=ActionChains(driver)
             action.send_keys('d').perform()
@@ -270,7 +288,7 @@ def page_message(driver):
         pass
     return page_message_lst
 
-def run(driver,choice,course_name,API,lock_screen):
+def run(driver,choice,course_name,API,lock_screen,speed):
     while True:
         print(color.green('正在检测页面内容'), flush=True)
         page_message_lst=page_message(driver)
@@ -281,7 +299,7 @@ def run(driver,choice,course_name,API,lock_screen):
             if 'ppt' in page_message_lst:
                 __ppt(driver)
             if 'vido' in page_message_lst:
-                study_page(driver,course_name,lock_screen)
+                study_page(driver,course_name,lock_screen,speed)
             if 'test' in page_message_lst:
                 if choice!='不刷题':
                     driver.switch_to.default_content()
@@ -291,9 +309,9 @@ def run(driver,choice,course_name,API,lock_screen):
                     print(color.magenta(f'已检测到{len(test_frames)}个测试'), flush=True)
                     for test_frame in test_frames:
                         try:
-                            if choice=='大学生搜题酱':
-                                get_question_date(driver,course_name,test_frame)
-                            elif choice=='DeepSeek AI':
+                            # if choice=='大学生搜题酱':
+                            #     get_question_date(driver,course_name,test_frame)
+                            if choice=='DeepSeek AI':
                                 Answer(driver,test_frame,course_name,API)
                         except Exception as e:
                             error_msg = traceback.format_exc()
@@ -341,49 +359,52 @@ def main(phone_number,password,course_name,choice,speed,API,lock_screen):
         except OSError:
             print(color.red('无法正常打开搜题插件，请检查地址是否正确，或检查版本是否与谷歌浏览器一致'),flush=True)
             return
+    options.add_argument("--enable-extensions")
+    options.add_argument("--disable-web-security")
 
     if browser=='edge':
+
         driver = webdriver.Edge(service=service, options=options)
     else:
         # 初始化Chrome浏览器
         driver = webdriver.Chrome(service=service, options=options)
     # driver.maximize_window()
     driver.implicitly_wait(2)
-    set_speed_extension(driver,browser)
+    # set_speed_extension(driver,browser)
     login_study(driver,phone_number,password)
     choice_course(driver,course_name,speed,True)
     check_face(driver)
     find_mission(driver)
     turn_page(driver,'学生学习页面')
     fold(driver)
-    run(driver,choice,course_name,API,lock_screen)
+    run(driver,choice,course_name,API,lock_screen,speed)
 
 if __name__ == '__main__':
     try:
         with open(r'task\tool\account_info.json', 'r', encoding='utf-8') as fil:
             account_info = json.load(fil)
-            try:
-                main(account_info['phone_number'],account_info['password'],account_info['cour'],
-                     account_info['choice'],account_info['speed'],account_info['API'],account_info['lock_screen'])
-            except NoSuchWindowException as e:
-                print(color.red('窗口意外关闭'),flush=True)
-            except SessionNotCreatedException as e:
-                error_msg = traceback.format_exc()
-                send_error(
-                    "看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)" + error_msg)
-                print(color.red('无法正常运行驱动，请检查地址是否正确，或根据用户须知检查版本是否与浏览器一致，如果不一致，'
-                                '请根据用户须知的指导前往下载相应版本的驱动，如果一致，请更换另外一个浏览器，但也要注意浏览器与驱动的版本是否一致，'
-                                '如果还是不行，请重新下载脚本或关机重启。'),flush=True)
-            except WebDriverException as e:
-                if 'ERR_INTERNET_DISCONNECTED' in str(e) or 'ERR_NAME_NOT_RESOLVED' in str(e):
-                    print(color.red('你网都没连，刷个屁的课啊'),flush=True)
-                else:
-                    print(color.red('出错了，具体原因请前往错误日志查看'),flush=True)
-                    error_msg = traceback.format_exc()
-                    send_error("看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)"+error_msg)
-            except Exception as e:
+        try:
+            main(account_info['phone_number'],account_info['password'],account_info['cour'],
+                 account_info['choice'],account_info['speed'],account_info['API'],account_info['lock_screen'])
+        except NoSuchWindowException as e:
+            print(color.red('窗口意外关闭'),flush=True)
+        except SessionNotCreatedException as e:
+            error_msg = traceback.format_exc()
+            send_error(
+                "看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)" + error_msg)
+            print(color.red('无法正常运行驱动，请检查地址是否正确，或根据用户须知检查版本是否与浏览器一致，如果不一致，'
+                            '请根据用户须知的指导前往下载相应版本的驱动，如果一致，请更换另外一个浏览器，但也要注意浏览器与驱动的版本是否一致，'
+                            '如果还是不行，请重新下载脚本或关机重启。'),flush=True)
+        except WebDriverException as e:
+            if 'ERR_INTERNET_DISCONNECTED' in str(e) or 'ERR_NAME_NOT_RESOLVED' in str(e):
+                print(color.red('你网都没连，刷个屁的课啊'),flush=True)
+            else:
+                print(color.red('出错了，具体原因请前往错误日志查看'),flush=True)
                 error_msg = traceback.format_exc()
                 send_error("看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)"+error_msg)
-                print(color.red('出错了，具体原因请前往错误日志查看'),flush=True)
+        except Exception as e:
+            error_msg = traceback.format_exc()
+            send_error("看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)"+error_msg)
+            print(color.red('出错了，具体原因请前往错误日志查看'),flush=True)
     except FileNotFoundError:
         print(color.red('未填写信息或未保存，请前往设置页面重新设置'),flush=True)

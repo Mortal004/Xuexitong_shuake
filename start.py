@@ -317,7 +317,7 @@ class Start:
         self.radio_button_3.grid(row=3, column=1, pady=10,columnspan=2, padx=5, sticky="w")
         # 刷题：输入框
         self.question_label = ttk.Label(self.function_set_frame, text="刷题设置:", font=self.font)
-        self.question_options = ["大学生搜题酱", "DeepSeek AI","不刷题"]
+        self.question_options = [ "DeepSeek AI","不刷题"]
         self.question_entry = ctk.CTkComboBox(self.function_set_frame, values=self.question_options, font=self.font,
                                               button_color=self.button_color,state = 'readonly',command=self.shua_ti_choice,
                                               button_hover_color=self.button_hover_color,
@@ -468,7 +468,7 @@ class Start:
                     else:
                         self.text_box.insert(tk.END, '当前版本为旧版本，请前往\n'
                                                      '夸克网盘：https://pan.quark.cn/s/eba634db1544\n'
-                                                     '或百度网盘: https://pan.baidu.com/s/1wbkc_07BqqQuwxri2WJtew?pwd=1234 下载')
+                                                     '或百度网盘: https://pan.baidu.com/s/1VIR752zNYio4e_QBE8bd2Q?pwd=shua 提取码: shua 下载')
         except Exception as e:
             self.text_box.insert(tk.END, '连接失败，请检查网络连接\n')
             self.text_box.insert(tk.END, f'错误信息：{e}\n')

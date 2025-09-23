@@ -2,6 +2,7 @@
 # All rights reserved.
 # This software is provided for non-commercial use only.
 # For more information, see the LICENSE file in the root directory of this project.
+from selenium.webdriver import ActionChains
 
 import time
 from task.tool import color
@@ -37,7 +38,7 @@ def check_face(driver):
         except:
             break
 
-def study_page(driver,course_name,lock_screen):
+def study_page(driver,course_name,lock_screen,speed):
     cond=False
     driver.switch_to.default_content()
 
@@ -62,7 +63,7 @@ def study_page(driver,course_name,lock_screen):
         except:
             txt = ''
             parent_element_class=''
-        if txt == '任务点未完成' and parent_element_class=='ans-attach-ct':
+        if txt == '任务点未完成' and 'ans-attach-ct' in parent_element_class:
             vido_iframe=element1.find_element(By.XPATH, "following-sibling::iframe[1]")
             driver.execute_script("arguments[0].scrollIntoView();", vido_iframe)
             driver.switch_to.frame(vido_iframe)
@@ -93,11 +94,17 @@ def study_page(driver,course_name,lock_screen):
             time.sleep(1)
             element=driver.find_element(By.CLASS_NAME,'vjs-duration-display')
             total_time=element.text
-            print(color.green(f'该视频总时长为：{total_time}'),flush=True)
+            if  total_time=='' or total_time=='0:00':
+                print(color.red('获取视频总时长失败'),flush=True)
+                total_time='1'
+            else:
+                print(color.green(f'该视频总时长为：{total_time}'),flush=True)
             print(color.yellow('请不要将窗口最小化，这有可能导致脚本异常'),flush=True)
             driver.switch_to.default_content()
             driver.switch_to.frame('iframe')
             last_time=0
+            h=0
+            b=0
             # 判断是否完成任务
             while True:
                 driver.switch_to.default_content()
@@ -109,7 +116,7 @@ def study_page(driver,course_name,lock_screen):
                 # 获取 parent_element2 的class值
                 parent_element2_class = parent_element2.get_attribute("class")
                 txt = element2.get_attribute('aria-label')
-                if txt=='任务点已完成' or parent_element2_class=='ans-attach-ct ans-job-finished':
+                if txt=='任务点已完成' or 'ans-attach-ct ans-job-finished' in parent_element2_class or h!=0:
                     # pyautogui.scroll(-250)
                     print(color.green(f'已完成第{i + 1}个视频'),flush=True)
                     time_end=time.time()
@@ -123,14 +130,30 @@ def study_page(driver,course_name,lock_screen):
                     video_question(driver)
                     element=driver.find_element(By.CLASS_NAME,'vjs-current-time-display')
                     current_time=element.text
-                    if last_time==current_time and current_time!='':
+                    if last_time==current_time and current_time!=''and b<=3:
                         try:
+                            b+=1
                             print(color.red(f'当前视频播放被暂停,点击继续播放'),flush=True)
                             driver.find_element(By.CSS_SELECTOR,'[class="vjs-play-control vjs-control vjs-button vjs-paused"]').click()
                         except:
                             print(color.red(f'点击失败'), flush=True)
+                    elif b>3:
+                        print(color.red(f'当前视频已被设置不能调节高倍数，现在将倍数调至1倍'),flush=True)
+                        try:
+                            for j in range(int(int(speed) - 1) * 10):
+                                pyautogui.press('a')
+                                action = ActionChains(driver)
+                                action.send_keys('a').perform()
+                                time.sleep(0.1)
+                            print(color.green('调节成功'), flush=True)
+                            driver.find_element(By.CSS_SELECTOR,
+                                                '[class="vjs-play-control vjs-control vjs-button vjs-paused"]').click()
+                            b=0
+                        except Exception as e:
+                            print(color.yellow(f'调节失败{e}'), flush=True)
                     last_time=current_time
-                    if current_time==total_time:
+                    if current_time==total_time and h==0:
+                        h+=1
                         try:
                             print(color.yellow('视频已播放完毕，但任务点仍未完成，开始重播'),flush=True)
                             driver.find_element(By.CSS_SELECTOR,'[class="vjs-play-control vjs-control vjs-button vjs-paused vjs-ended"]').click()

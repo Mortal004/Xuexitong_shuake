@@ -10,6 +10,11 @@ from openai import OpenAI
 from selenium.webdriver.common.by import By
 from task.tool.no_secret import DecodeSecret
 from task.tool import color
+import requests
+import sys
+import io
+# 设置默认编码为UTF-8
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 class Answer:
     def __init__(self, driver, test_frame, course_name,API_KEY):
@@ -81,7 +86,7 @@ class Answer:
 
              7.请严格按照题目编号顺序给出答案,1,2,3,4这样的题目序号顺序给出选择的答案。
              每个题目的答案用“/”隔开,答案中不要题号，只需要答案，不用重复问题,不要给多了答案，有多少道题就给多少答案，
-             /的数量是能保持比题目数量少一个，不能多也不能少。
+             /的数量是能保持比题目数量少一个，不能多也不能少,不要有换行符
              
              8.最终你给出的答案格式应当类似于下面这样：A/BCD/C/'论述题答案'/D/'填空题答案1','填空题答案2',...
 
@@ -91,10 +96,9 @@ class Answer:
             self.prompt += self.all_title
             print(color.blue('正在使用deepseek搜索该测试所有题目答案...'), flush=True)
             try:
-                # all_answer = 'A/你,你/你,你,你/你,你/你,你/你,你/A/ni/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/A/你,你/你,你,你/你,你/你,你/你,你,你,你,你,你,/你，你/'
                 all_answer = self.DeepSeekAsk(self.prompt)
-            except:
-                print(color.red('系统繁忙，请稍后再试'), flush=True)
+            except Exception as e:
+                print(color.red('系统繁忙，请稍后再试\n{}'.format(e)), flush=True)
                 return
             print(color.green('已成功获取答案'), flush=True)
             # 使用正则表达式按 '/' 分隔字符串
@@ -102,7 +106,12 @@ class Answer:
             # 转换为字典
             self.answer_dict = {i : part for i, part in enumerate(parts)}
             self.finish_title()
-            self.submit()
+            message=self.submit()
+            if message=='False':
+                driver.switch_to.frame('iframe')
+                print(color.green('重新做题'), flush=True)
+                Answer(self.driver, self.frame, self.course_name,self.API_KEY)
+
 
     def DeepSeekAsk(self,prompt):
         message = {"role": "user", "content": prompt}
@@ -113,14 +122,15 @@ class Answer:
             temperature=1.3,
             stream=False
         )
-        return response.choices[0].message.content
+        answer=response.choices[0].message.content
+        return answer
 
     def finish_title(self):
-        dit = {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7}
         print(color.green('开始答题'), flush=True)
         k = 0
         ans_num = 0
         for num, answer in self.answer_dict.items():
+            dit = {'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7}
             num = num - k
             try:
                 # 滚动到题目
@@ -139,12 +149,32 @@ class Answer:
                 if answer not in ['A','B'] and self.questionType_list[num]=='判断题':
                     k += 1
                     continue
+                if self.optionWebElementList[num][dit.get(answer)].get_attribute('aria-checked')=='true':
+                    print(color.red('已回答，无需重复回答'),flush=True)
+                    ans_num += 1
+                    continue
                 self.optionWebElementList[num][dit.get(answer)].click()
                 ans_num+=1
             elif self.questionType_list[num]=='多选题':
+                #点击正确答案
                 for ans in answer:
                     time.sleep(1)
-                    self.optionWebElementList[num][dit.get(ans)].click()
+                    try:
+                        # print(self.optionWebElementList[num][dit.get(ans)].get_attribute('aria-checked'))
+                        if self.optionWebElementList[num][dit.get(ans)].get_attribute('aria-checked')=='true':
+                            print(color.red('已回答，无需重复回答'), flush=True)
+                        else:
+                            self.optionWebElementList[num][dit.get(ans)].click()
+                    except:
+                        self.optionWebElementList[num][dit.get(ans)].click()
+                    del dit[ans]
+                #去除错误答案
+                for value in dit.values():
+                    try:
+                        if self.optionWebElementList[num][value].get_attribute('aria-checked')=='true':
+                            self.optionWebElementList[num][value].click()
+                    except:
+                        continue
                 ans_num+=1
             elif self.questionType_list[num]=='简答题' or self.questionType_list[num]=='论述题' or self.questionType_list[num]=='名词解释':
                 i = 0
@@ -183,8 +213,9 @@ class Answer:
                     time.sleep(1)
                 ans_num+=1
             else:
-                print(color.red(f'该题为{self.questionType_list[num]}，暂时无法作答'))
+                print(color.red(f'该题为{self.questionType_list[num]}，暂时无法作答'), flush=True)
         self.ans_rate=ans_num/len(self.answer_dict)
+        print(ans_num,'/',len(self.answer_dict))
 
     def submit(self):
         formatted_result = "{:.2%}".format(self.ans_rate)
@@ -198,9 +229,13 @@ class Answer:
             # 点击确认
             self.driver.switch_to.default_content()
             self.driver.find_element(By.XPATH, '//*[@id="popok"]').click()
-            time.sleep(1)
+            time.sleep(2)
+            message =self.driver.find_element(By.ID, 'popcontent').text
+            if '未达及格线' in message:
+                print(color.red(f'提交失败，原因：{message}'), flush=True)
+                self.driver.find_element(By.ID, 'popok').click()
+                return 'False'
             self.save_score()
-
         else:
             print(color.yellow('3秒后保存'), flush=True)
             time.sleep(3)
