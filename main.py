@@ -309,10 +309,7 @@ def run(driver,choice,course_name,API,lock_screen,speed):
                     print(color.magenta(f'已检测到{len(test_frames)}个测试'), flush=True)
                     for test_frame in test_frames:
                         try:
-                            # if choice=='大学生搜题酱':
-                            #     get_question_date(driver,course_name,test_frame)
-                            if choice=='DeepSeek AI':
-                                Answer(driver,test_frame,course_name,API)
+                            Answer(driver,test_frame,course_name,API)
                         except Exception as e:
                             error_msg = traceback.format_exc()
                             send_error(error_msg)
@@ -352,13 +349,6 @@ def main(phone_number,password,course_name,choice,speed,API,lock_screen):
     options = Options()
     options.add_argument("--disable-blink-features=AutomationControlled")  # 禁用自动化控制提示
     options.add_extension(r"task\tool\speed.crx")
-    if choice=='大学生搜题酱':
-        # 可以设置Chrome启动选项（如果需要）
-        try:
-            options.add_extension(r"task\tool\zyb-227372.crx")
-        except OSError:
-            print(color.red('无法正常打开搜题插件，请检查地址是否正确，或检查版本是否与谷歌浏览器一致'),flush=True)
-            return
     options.add_argument("--enable-extensions")
     options.add_argument("--disable-web-security")
 
