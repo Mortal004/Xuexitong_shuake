@@ -4,6 +4,7 @@
 # For more information, see the LICENSE file in the root directory of this project.
 
 import json
+import pickle
 import sys
 import time
 import traceback
@@ -18,10 +19,74 @@ from selenium import webdriver
 from task.tool import color
 from task.watch_ppt import __ppt
 from task.watch_vido import study_page
-# from task.quiz import get_question_date
 from task.quiz_deepseek  import Answer
 from task.tool.send_wx import send_error
 
+def get_cookie(driver):
+    try:
+        pickle.dump(driver.get_cookies(), open(r'task/tool/cookies.pkl', 'wb'))
+        return True
+    except Exception as e:
+        print(color.red(f'获取cookie失败'),flush=True)
+        error_msg = traceback.format_exc()
+        send_error(
+            "看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)" + error_msg)
+        return False
+
+def auto_login_with_cookies(driver):
+    if not driver.title=='用户登录':
+        return True
+    try:
+        # 清除可能存在的旧cookie
+        driver.delete_all_cookies()
+        try:
+            cookies = pickle.load(open(r'task/tool/cookies.pkl', 'rb'))
+        except:
+            return False
+        # 逐个添加cookie
+        for cookie in cookies:
+            try:
+                # 移除可能引起问题的属性
+                cookie_to_add = cookie.copy()
+
+                # Selenium的add_cookie方法不支持'sameSite'参数，需要移除
+                if 'sameSite' in cookie_to_add:
+                    del cookie_to_add['sameSite']
+
+                # 确保domain格式正确
+                if cookie_to_add['domain'].startswith('.'):
+                    # 对于以点开头的domain，确保浏览器在当前域的正确上下文中
+                    pass
+
+                driver.add_cookie(cookie_to_add)
+                # print(color.green(f"成功添加cookie: {cookie['name']}"),flush=True)
+
+            except Exception as e:
+                pass
+                # print(color.red(f"添加cookie {cookie['name']} 时出错: {e}"),flush=True)
+
+        # 刷新页面使cookie生效
+        driver.refresh()
+
+        # 等待页面加载
+        time.sleep(3)
+        #  访问需要登录的页面测试
+        test_url = "https://i.chaoxing.com"  # 个人中心页面
+        driver.get(test_url)
+        # 验证登录是否成功
+        if driver.title!='用户登录':
+            print(color.green("自动登录验证成功！"),flush=True)
+            return True
+        else:
+            print(color.red("登录可能已过期"),flush=True)
+            return False
+
+    except Exception as e:
+        print(color.red(f"自动登录过程中出错"),flush=True)
+        error_msg = traceback.format_exc()
+        send_error(
+            "看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)" + error_msg)
+        return False
 
 def login_study(driver,phone_number,password):
     """
@@ -41,17 +106,23 @@ def login_study(driver,phone_number,password):
     print(color.green('正在登录中...'), flush=True)
     # 自动登录
     element = driver.find_element(By.ID, 'phone')
+    time.sleep(1)
     element1 = driver.find_element(By.ID, 'pwd')
     element.send_keys(phone_number)  # 替换成你的手机号码
     element1.send_keys(password)  # 替换成你的密码
-
     # 点击登录
     login_button = driver.find_element(By.ID, 'loginBtn')
     try:
         login_button.click()
     except:
-       pass
+        pass
     time.sleep(3)
+    if not auto_login_with_cookies(driver):
+        print(color.red('登陆失败，请打开手机端学习通，扫码登录'), flush=True)
+        while driver.title=='用户登录':
+            time.sleep(1)
+    get_cookie(driver)
+    print(color.green('登录成功'), flush=True)
     # 转到页面内窗口
     #点击课程
     try:
@@ -59,21 +130,14 @@ def login_study(driver,phone_number,password):
         time.sleep(1)
     except:
         try:
-            driver.find_element(By.CSS_SELECTOR,'[title="课程"]').click()
+            driver.find_element(By.CSS_SELECTOR, '[title*="课程"]').click()
             time.sleep(1)
         except:
             pass
     try:
         time.sleep(3)
         driver.switch_to.frame('frame_content')
-        try:
-            # 体验最新版本
-            element=driver.find_element(By.CSS_SELECTOR,'[class="experience fr"]')
-            print(color.green('正在体验最新版本'), flush=True)
-            element.click()
-            turn_page(driver,'新泛雅')
-        except:
-            pass
+
         # 选择‘我的课程’并点击
         element=driver.find_element(By.CLASS_NAME,'course-tab')
         elements=element.find_elements(By.TAG_NAME,'div')
@@ -85,40 +149,6 @@ def login_study(driver,phone_number,password):
         time.sleep(1)
     except:
         pass
-
-def set_speed_extension(driver,browser):
-    #打开设置页面
-    time.sleep(2)
-    driver.get(f'{browser}://extensions/?id=mjhlabbcmjflkpjknnicihkfnmbdfced')
-    if browser=='edge':
-        driver.find_element(By.ID,'itemOptions').click()
-        driver.refresh()  # 使用 Selenium 刷新
-        time.sleep(2)
-        # 获取所有标签页句柄并切换到最新标签页
-        handles = driver.window_handles
-        driver.switch_to.window(handles[-1])  # 假设新标签页是最后一个
-        # switch_to_new_window(driver,'extension://mjhlabbcmjflkpjknnicihkfnmbdfced/options.html')
-    elif browser=='chrome':
-        # 等待宿主元素加载
-        host_element = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.TAG_NAME, "extensions-manager"))
-        )
-        # 获取 Shadow Root
-        shadow_root = driver.execute_script("return arguments[0].shadowRoot", host_element)
-
-        host_element2=shadow_root.find_element(By.ID, "toolbar")
-        # 获取 Shadow Root
-        shadow_root2 = driver.execute_script("return arguments[0].shadowRoot", host_element2)
-
-        # 定位 Shadow DOM 中的元素
-        shadow_root2.find_element(By.ID,'devMode').click()
-        # time.sleep(2000)
-        driver.get('chrome-extension://mjhlabbcmjflkpjknnicihkfnmbdfced/options.html')
-    elements=driver.find_elements(By.CLASS_NAME,'fieldValue')
-    elements[len(elements)-1].click()
-    element=driver.find_element(By.XPATH,'//*[@id="App"]/div[2]/div[2]/div[3]/div[1]/div[1]/div/div[5]/input')
-    element.clear()
-    element.send_keys('1')
 
 def choice_course(driver, course_name,speed,condition):
     # time.sleep(200)
@@ -138,7 +168,7 @@ def choice_course(driver, course_name,speed,condition):
     if len(course_elements)==0:
         course_elements = driver.find_elements(By.CLASS_NAME, 'courseName')
     if len(course_elements)==0:
-        turn_page(driver, '个人空间')
+        # turn_page(driver, '个人空间')
         driver.switch_to.frame('frame_content')
         course_elements = driver.find_elements(By.CSS_SELECTOR, '[class="w_cour_txtH fl"]')
     # 遍历所有课程元素
@@ -168,21 +198,37 @@ def choice_course(driver, course_name,speed,condition):
 
             break
     else:
-        print(color.red(f"未找到《{course_name}》这门课程，请确认好课程名称后再试，"
-                        "或者检查账号密码是写正确，如果没有问题，请再试一次并且横屏拍摄视频发送至作者邮箱（2022865286@qq.com)"),flush=True)
-        data = []
         try:
-            with open('task/tool/course_name.json', 'r') as f:
-                data = json.load(f)
-        except FileNotFoundError:
-            pass
-        try:
-            data.remove(course_name)
-        except ValueError:
-            pass
-        with open('task/tool/course_name.json', 'w') as f:
-            json.dump(data, f)
-        sys.exit(1)
+            # 体验最新版本
+            element=driver.find_element(By.CSS_SELECTOR,".experience")
+            print(color.green('正在体验最新版本'), flush=True)
+            element.click()
+            turn_page(driver,'新泛雅')
+            element=driver.find_elements(By.XPATH,'//*[@id="stukc"]/div[1]/div[1]/div/a')
+            time.sleep(2)
+            if len(element)!=0:
+                element[0].click()
+                driver.find_element(By.XPATH,'//*[@id="stukc"]/div[1]/div[1]/div/div/ul/li[1]').click()
+                choice_course(driver,course_name,speed,condition)
+        except :
+
+            print(color.red(f"未找到《{course_name}》这门课程，请检查名称是否正确，或手动选择你要刷课的课程，打开该课程后等待片刻"),
+                  flush=True)
+            while len(driver.window_handles)==1:
+                time.sleep(1)
+            # data = []
+            # try:
+            #     with open('task/tool/course_name.json', 'r') as f:
+            #         data = json.load(f)
+            # except FileNotFoundError:
+            #     pass
+            # try:
+            #     data.remove(course_name)
+            # except ValueError:
+            #     pass
+            # with open('task/tool/course_name.json', 'w') as f:
+            #     json.dump(data, f)
+            # sys.exit(1)
     turn_page(driver,course_name)
 
 def check_face(driver):
@@ -216,7 +262,7 @@ def find_mission(driver):
     except:
         print(color.red('所有任务点均已完成'),flush=True)
         sys.exit()
-        
+
     # 打印提示信息，表示已检测到未完成点
     print(color.magenta('已检测到未完成点'),flush=True)
     time.sleep(0.5)
@@ -310,13 +356,13 @@ def run(driver,choice,course_name,API,lock_screen,speed):
                     for test_frame in test_frames:
                         try:
                             Answer(driver,test_frame,course_name,API)
-                        except Exception as e:
+                        except :
                             error_msg = traceback.format_exc()
                             send_error(error_msg)
                             print(color.yellow('出错了，具体原因请前往错误日志查看，请自行保存或提交,15秒后继续'), flush=True)
                             time.sleep(15)
                 else:
-                    print(color.yellow('跳过测试题'),flush=True)
+                    print(color.yellow('您已选择不刷题，即将跳过测试题'),flush=True)
         driver.switch_to.default_content()
         print(color.green('跳转下一页'), flush=True)
         try:
@@ -333,7 +379,7 @@ def run(driver,choice,course_name,API,lock_screen,speed):
 
 def main(phone_number,password,course_name,choice,speed,API,lock_screen):
     print(color.green('启动浏览器中...'), flush=True)
-    with open(r'task\tool\account_info.json', 'r', encoding='utf-8') as f:
+    with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as f:
         browser_info = json.load(f)
     # 设置ChromeDriver的路径
     driver_path = browser_info['driver_path']
@@ -369,9 +415,43 @@ def main(phone_number,password,course_name,choice,speed,API,lock_screen):
     fold(driver)
     run(driver,choice,course_name,API,lock_screen,speed)
 
+def set_speed_extension(driver,browser):
+    #打开设置页面
+    time.sleep(2)
+    driver.get(f'{browser}://extensions/?id=mjhlabbcmjflkpjknnicihkfnmbdfced')
+    if browser=='edge':
+        driver.find_element(By.ID,'itemOptions').click()
+        driver.refresh()  # 使用 Selenium 刷新
+        time.sleep(2)
+        # 获取所有标签页句柄并切换到最新标签页
+        handles = driver.window_handles
+        driver.switch_to.window(handles[-1])  # 假设新标签页是最后一个
+        # switch_to_new_window(driver,'extension://mjhlabbcmjflkpjknnicihkfnmbdfced/options.html')
+    elif browser=='chrome':
+        # 等待宿主元素加载
+        host_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.TAG_NAME, "extensions-manager"))
+        )
+        # 获取 Shadow Root
+        shadow_root = driver.execute_script("return arguments[0].shadowRoot", host_element)
+
+        host_element2=shadow_root.find_element(By.ID, "toolbar")
+        # 获取 Shadow Root
+        shadow_root2 = driver.execute_script("return arguments[0].shadowRoot", host_element2)
+
+        # 定位 Shadow DOM 中的元素
+        shadow_root2.find_element(By.ID,'devMode').click()
+        # time.sleep(2000)
+        driver.get('chrome-extension://mjhlabbcmjflkpjknnicihkfnmbdfced/options.html')
+    elements=driver.find_elements(By.CLASS_NAME,'fieldValue')
+    elements[len(elements)-1].click()
+    element=driver.find_element(By.XPATH,'//*[@id="App"]/div[2]/div[2]/div[3]/div[1]/div[1]/div/div[5]/input')
+    element.clear()
+    element.send_keys('1')
+
 if __name__ == '__main__':
     try:
-        with open(r'task\tool\account_info.json', 'r', encoding='utf-8') as fil:
+        with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as fil:
             account_info = json.load(fil)
         try:
             main(account_info['phone_number'],account_info['password'],account_info['cour'],

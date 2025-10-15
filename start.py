@@ -686,7 +686,7 @@ class Start:
 
     def save(self):
         try:
-            with open(r'task\tool\account_info.json', 'r', encoding='utf-8') as f:
+            with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as f:
                 self.account_info = json.load(f)
         except FileNotFoundError:
             self.account_info = {}
@@ -744,7 +744,7 @@ class Start:
             self.result = tk.messagebox.askokcancel('确认保存', '你确定要保存吗？\n(使用DeepSeek可支持全题型作答)')
         if self.result:
             tk.messagebox.showinfo('', '保存成功')
-            with open(r'task\tool\account_info.json', 'w', encoding='utf-8') as f:
+            with open(r'task/tool/account_info.json', 'w', encoding='utf-8') as f:
                 json.dump(self.account_info, f)
             self.save_course()
             self.change_font()
@@ -758,7 +758,7 @@ class Start:
                     self.course_score_entry.configure(values= tuple(data))
                     self.course_vido_entry.configure(values= tuple(data))
                     self.cour_entry.configure(values= tuple(data))
-            with open(r'task\tool\account_info.json', 'r', encoding='utf-8') as fil:
+            with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as fil:
                 self.account_info = json.load(fil)
                 self.course_score_entry.set( self.account_info['cour'])
                 self.course_vido_entry.set( self.account_info['cour'])
@@ -769,8 +769,9 @@ class Start:
                 self.password_entry.insert(0, self.account_info['password'])
                 self.cour_entry.set( self.account_info['cour'])
                 self.question_entry.set( self.account_info['choice'])
-                self.API_entry.insert(0, self.account_info['API'])
+
                 try:
+                    self.API_entry.insert( 0,self.account_info['API'])
                     self.font_entry.set(self.account_info['font_type'])
                     self.size_entry.set(self.account_info['font_size'])
                     self.change_font()

@@ -2,31 +2,69 @@
 # All rights reserved.
 # This software is provided for non-commercial use only.
 # For more information, see the LICENSE file in the root directory of this project.
+
 from selenium.webdriver import ActionChains
 
 import time
 from task.tool import color
 import pyautogui
 from selenium.webdriver.common.by import By
+import itertools
 
+
+def generate_combinations_list(input_list):
+    """
+    返回列表形式的组合，完整组合放在第一位
+    """
+    n = len(input_list)
+
+    if n == 3:
+        # 三者都出现的情况（放在第一位）
+        triple = [input_list.copy()]
+        # 两两组合的所有可能
+        pairs = [list(combo) for combo in itertools.combinations(input_list, 2)]
+        return triple + pairs
+
+    elif n == 4:
+        # 取四个元素的情况（放在第一位）
+        quadruple = [input_list.copy()]
+        # 取三个元素的所有可能
+        triples = [list(combo) for combo in itertools.combinations(input_list, 3)]
+        return quadruple + triples
 def video_question(driver):
     try:
         element=driver.find_element(By.CLASS_NAME,'tkTopic')
         print(color.yellow('已检测到视频中有题目'), flush=True)
-        options = element.find_element(By.CLASS_NAME,'tkItem_ul')
-        options=options.find_elements(By.TAG_NAME,'li')
-        for option in options:
-            option.click()
-            #提交
-            submit=element.find_element(By.ID,'videoquiz-submit')
-            submit.click()
-            #继续学习
-            try:
-                continue_learn=element.find_element(By.ID,'videoquiz-continue')
-                continue_learn.click()
-            except:
-                pass
-    except:
+        try:
+
+            question_type=element.find_element(By.CLASS_NAME,'tkTopic_type').text
+        except:
+            question_type=element.find_element(By.CLASS_NAME,'tkTopic_title').text
+        options = element.find_element(By.CLASS_NAME, 'tkItem_ul')
+        options = options.find_elements(By.TAG_NAME, 'li')
+        submit = element.find_element(By.ID, 'videoquiz-submit')
+        try:
+            if question_type=='单选题' or question_type=='判断题':
+                for option in options:
+                    option.click()
+                    #提交
+                    submit.click()
+            elif question_type=='多选题':
+                answer_lost=generate_combinations_list(options)
+                for answer in answer_lost:
+                    for option in answer:
+                        option.click()
+                    #提交
+                    submit.click()
+        except:
+            pass
+        #继续学习
+        try:
+            continue_learn=element.find_element(By.ID,'videoquiz-continue')
+            continue_learn.click()
+        except :
+            pass
+    except :
         return
 
 def check_face(driver):
@@ -130,28 +168,29 @@ def study_page(driver,course_name,lock_screen,speed):
                     video_question(driver)
                     element=driver.find_element(By.CLASS_NAME,'vjs-current-time-display')
                     current_time=element.text
-                    if last_time==current_time and current_time!=''and b<=3:
+                    if last_time==current_time and current_time!='' and b!=4:
+                        b += 1
                         try:
-                            b+=1
                             print(color.red(f'当前视频播放被暂停,点击继续播放'),flush=True)
                             driver.find_element(By.CSS_SELECTOR,'[class="vjs-play-control vjs-control vjs-button vjs-paused"]').click()
                         except:
                             print(color.red(f'点击失败'), flush=True)
-                    elif b>3:
+                    elif b==4:
+                        b+=1
                         print(color.red(f'当前视频已被设置不能调节高倍数，现在将倍数调至1倍'),flush=True)
+                        for j in range(int(int(speed) - 1) * 10):
+                            pyautogui.press('a')
+                            action = ActionChains(driver)
+                            action.send_keys('a').perform()
+                            time.sleep(0.1)
+                        print(color.green('调节成功'), flush=True)
                         try:
-                            for j in range(int(int(speed) - 1) * 10):
-                                pyautogui.press('a')
-                                action = ActionChains(driver)
-                                action.send_keys('a').perform()
-                                time.sleep(0.1)
-                            print(color.green('调节成功'), flush=True)
                             driver.find_element(By.CSS_SELECTOR,
                                                 '[class="vjs-play-control vjs-control vjs-button vjs-paused"]').click()
-                            b=0
-                        except Exception as e:
-                            print(color.yellow(f'调节失败{e}'), flush=True)
-                    last_time=current_time
+
+                        except :
+                            print(color.yellow(f'点击播放失败'), flush=True)
+                    last_time = current_time
                     if current_time==total_time and h==0:
                         h+=1
                         try:
@@ -160,8 +199,11 @@ def study_page(driver,course_name,lock_screen,speed):
                         except:
                             print(color.red(f'点击失败'), flush=True)
                     if lock_screen:
-                        pyautogui.move(20, 0, )
-                        pyautogui.move(-20,0)
+                        try:
+                            pyautogui.move(20, 0, )
+                            pyautogui.move(-20,0)
+                        except:
+                            pass
         driver.switch_to.default_content()
         driver.switch_to.frame('iframe')
     print(color.green('所有视频均已完成'),flush=True)
