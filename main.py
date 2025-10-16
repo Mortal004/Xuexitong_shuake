@@ -209,7 +209,7 @@ def choice_course(driver, course_name,speed,condition):
             if len(element)!=0:
                 element[0].click()
                 driver.find_element(By.XPATH,'//*[@id="stukc"]/div[1]/div[1]/div/div/ul/li[1]').click()
-                choice_course(driver,course_name,speed,condition)
+            choice_course(driver,course_name,speed,condition)
         except :
 
             print(color.red(f"未找到《{course_name}》这门课程，请检查名称是否正确，或手动选择你要刷课的课程，打开该课程后等待片刻"),
@@ -477,4 +477,5 @@ if __name__ == '__main__':
             send_error("看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)"+error_msg)
             print(color.red('出错了，具体原因请前往错误日志查看'),flush=True)
     except FileNotFoundError:
+
         print(color.red('未填写信息或未保存，请前往设置页面重新设置'),flush=True)
