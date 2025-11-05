@@ -1,7 +1,8 @@
 # Copyright (c) 2025 Mortal004
 # All rights reserved.
 # This software is provided for non-commercial use only.
-# For more information, see the LICENSE file in the root directory of this project
+# For more information, see the LICENSE file in the root directory of this project.
+import json
 
 from selenium.webdriver import ActionChains
 
@@ -29,8 +30,12 @@ def generate_combinations_list(input_list):
         # 取四个元素的情况（放在第一位）
         quadruple = [input_list.copy()]
         # 取三个元素的所有可能
+        pairs = [list(combo) for combo in itertools.combinations(input_list, 2)]
         triples = [list(combo) for combo in itertools.combinations(input_list, 3)]
-        return quadruple + triples
+        return quadruple + triples + pairs
+    else:
+        return [input_list]
+
 def video_question(driver):
     try:
         element=driver.find_element(By.CLASS_NAME,'tkTopic')
@@ -51,9 +56,14 @@ def video_question(driver):
                     submit.click()
             elif question_type=='多选题':
                 answer_lost=generate_combinations_list(options)
+                last_ans_set=set()
                 for answer in answer_lost:
-                    for option in answer:
+                    now_ans_set=set(answer)
+                    # 使用 ^ 运算符计算对称差集
+                    different_elements = now_ans_set ^ last_ans_set
+                    for option in different_elements:
                         option.click()
+                    last_ans_set=now_ans_set
                     #提交
                     submit.click()
         except:
@@ -76,7 +86,50 @@ def check_face(driver):
         except:
             break
 
-def study_page(driver,course_name,lock_screen,speed):
+def check_vido_play(driver,last_time,current_time):
+    global b,pause_start_time
+    if last_time == current_time and current_time != '':
+        pause_duration = time.time() - pause_start_time
+        b += 1
+        if  pause_duration >= 2 and b!=3:
+            try:
+                print(color.red(f'当前视频播放被暂停,点击继续播放'), flush=True)
+                driver.find_element(By.CSS_SELECTOR,
+                                    '[class="vjs-play-control vjs-control vjs-button vjs-paused"]').click()
+            except:
+                print(color.red(f'点击失败'), flush=True)
+            pause_start_time = time.time()  # 记录第一次检测到暂停的时间
+        elif b == 3:
+            # 当暂停时间间隔小于2秒时，执行原elif的代码
+            try:
+                with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as f:
+                    account_info = json.load(f)
+                    speed=account_info['speed']
+                    try:
+                        print(color.red(f'当前视频已被设置不能调节高倍数，现在将倍数调至1倍'), flush=True)
+                        for j in range(int(int(speed) - 1) * 10):
+                            pyautogui.press('a')
+                            action = ActionChains(driver)
+                            action.send_keys('a').perform()
+                            time.sleep(0.1)
+                        print(color.green('调节成功'), flush=True)
+                        try:
+                            driver.find_element(By.CSS_SELECTOR,
+                                                '[class="vjs-play-control vjs-control vjs-button vjs-paused"]').click()
+                        except:
+                            print(color.yellow(f'点击播放失败'), flush=True)
+                    except:
+                        pass
+                    account_info['speed']='1'
+                    with open(r'task/tool/account_info.json', 'w', encoding='utf-8') as fil:
+                        json.dump(account_info, fil)
+            except:
+                pass
+    else:
+        pause_start_time = 0  # 视频正常播放，重置暂停时间记录
+        b=0
+
+def study_page(driver,course_name,lock_screen):
     cond=False
     driver.switch_to.default_content()
 
@@ -143,6 +196,7 @@ def study_page(driver,course_name,lock_screen,speed):
             last_time=0
             h=0
             b=0
+            pause_start_time = 0  # 添加变量记录暂停开始时间
             # 判断是否完成任务
             while True:
                 driver.switch_to.default_content()
@@ -168,28 +222,7 @@ def study_page(driver,course_name,lock_screen,speed):
                     video_question(driver)
                     element=driver.find_element(By.CLASS_NAME,'vjs-current-time-display')
                     current_time=element.text
-                    if last_time==current_time and current_time!='' and b!=4:
-                        b += 1
-                        try:
-                            print(color.red(f'当前视频播放被暂停,点击继续播放'),flush=True)
-                            driver.find_element(By.CSS_SELECTOR,'[class="vjs-play-control vjs-control vjs-button vjs-paused"]').click()
-                        except:
-                            print(color.red(f'点击失败'), flush=True)
-                    elif b==4:
-                        b+=1
-                        print(color.red(f'当前视频已被设置不能调节高倍数，现在将倍数调至1倍'),flush=True)
-                        for j in range(int(int(speed) - 1) * 10):
-                            pyautogui.press('a')
-                            action = ActionChains(driver)
-                            action.send_keys('a').perform()
-                            time.sleep(0.1)
-                        print(color.green('调节成功'), flush=True)
-                        try:
-                            driver.find_element(By.CSS_SELECTOR,
-                                                '[class="vjs-play-control vjs-control vjs-button vjs-paused"]').click()
-
-                        except :
-                            print(color.yellow(f'点击播放失败'), flush=True)
+                    check_vido_play(driver,last_time,current_time)
                     last_time = current_time
                     if current_time==total_time and h==0:
                         h+=1
@@ -199,11 +232,8 @@ def study_page(driver,course_name,lock_screen,speed):
                         except:
                             print(color.red(f'点击失败'), flush=True)
                     if lock_screen:
-                        try:
-                            pyautogui.move(20, 0, )
-                            pyautogui.move(-20,0)
-                        except:
-                            pass
+                        pyautogui.move(20, 0, )
+                        pyautogui.move(-20,0)
         driver.switch_to.default_content()
         driver.switch_to.frame('iframe')
     print(color.green('所有视频均已完成'),flush=True)
@@ -221,6 +251,7 @@ def save_vido(driver,course_name):
             f'已刷完:《{title}》章节中的所有视频\n完成时间：{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))}\n\n')
     except:
         pass
+
 def judge_active(driver):
     driver.switch_to.default_content()
     element=driver.find_element(By.CSS_SELECTOR, '[class="prev_ul clearfix"]')
@@ -234,5 +265,3 @@ def judge_active(driver):
         return True
     else:
         return False
-
-

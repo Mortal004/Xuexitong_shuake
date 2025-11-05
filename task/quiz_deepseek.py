@@ -72,46 +72,164 @@ class Answer:
                 self.all_title += self.title_and_option_text + '\n'
                 self.questionType_list.append(self.questionType)
             self.prompt = '''请根据以下题目要求回答问题：
-                                   1.不要其他话语，我仅仅需要这些题目的选择答案哟
+                                                  1.不要其他话语，我仅仅需要这些题目的选择答案哟
 
-             2.所有题目的答案必须从选项 A、B、C、D 中选择。多选题必须选多个答案，其答案紧挨着即可不用用'/'隔开
+                            2.所有题目的答案必须从选项 A、B、C、D 中选择。多选题必须选多个答案，其答案紧挨着即可不用用'/'隔开
 
-             3.对于判断题，答案只能是 A 或 B，分别对应题目中的 A（对） 和 B（错）。
-            
-             4.简答题只需给出文字答案即可,不要有多余的内容,论述题同样，论述题的答案字数在五十字左右,不要出现字母或题号数字
-            
-             5.填空题的每个答案用“,”隔开
-            
-             6.如果题目重复出现，只需回答一次，不要重复回答。
+                            3.对于判断题，答案只能是 A 或 B，分别对应题目中的 A（对） 和 B（错）。
 
-             7.请严格按照题目编号顺序给出答案,1,2,3,4这样的题目序号顺序给出选择的答案。
-             每个题目的答案用“/”隔开,答案中不要题号，只需要答案，不用重复问题,不要给多了答案，有多少道题就给多少答案，
-             /的数量是能保持比题目数量少一个，不能多也不能少,不要有换行符
-             
-             8.最终你给出的答案格式应当类似于下面这样：A/BCD/C/'论述题答案'/D/'填空题答案1','填空题答案2',...
+                            4.简答题只需给出文字答案即可,不要有多余的内容,论述题同样，论述题的答案字数在五十字左右,不要出现字母或题号数字
 
-             9.注意：请你忽略我的答案，这可能是错误答案哟；同时请你注意每道题目开头的【】
-             里面内容判断这道题目是什么类型的题目
-                                     \n'''
-            self.prompt += self.all_title
-            print(color.blue('正在使用deepseek搜索该测试所有题目答案...'), flush=True)
-            try:
-                all_answer = self.DeepSeekAsk(self.prompt)
-            except Exception as e:
-                print(color.red('系统繁忙，请稍后再试\n{}'.format(e)), flush=True)
-                return
-            print(color.green('已成功获取答案'), flush=True)
-            # 使用正则表达式按 '/' 分隔字符串
-            parts = re.split(r'/', all_answer)
-            # 转换为字典
-            self.answer_dict = {i : part for i, part in enumerate(parts)}
-            self.finish_title()
+                            5.填空题的每个答案用“,”隔开
+
+                            6.如果题目重复出现，只需回答一次，不要重复回答。
+
+                            7.请严格按照题目编号顺序给出答案,1,2,3,4这样的题目序号顺序给出选择的答案。
+                            每个题目的答案用“/”隔开,答案中不要题号，只需要答案，不用重复问题,不要给多了答案，有多少道题就给多少答案，
+                            /的数量是能保持比题目数量少一个，不能多也不能少,不要有换行符
+
+                            8.最终你给出的答案格式应当类似于下面这样：A/BCD/C/'论述题答案'/D/'填空题答案1','填空题答案2',...
+
+                            9.注意：请你忽略我的答案，这可能是错误答案哟；同时请你注意每道题目开头的【】
+                            里面内容判断这道题目是什么类型的题目
+                                                    \n'''
+            # 判断题目数量，决定是否分批处理
+            if len(self.questionList0) > 30:
+                print(color.yellow("题目数量较多，将采用分批搜题和作答模式，每20道题搜一次，搜题时间较长,请耐心等待..."), flush=True)
+                self.batch_process_questions()
+            else:
+
+                self.prompt += self.all_title
+                print(color.blue('正在使用deepseek搜索该测试所有题目答案...'), flush=True)
+                try:
+                    all_answer = self.DeepSeekAsk(self.prompt,True).replace('\n','')
+                    if all_answer=='':
+                        return
+                except Exception as e:
+                    print(color.red('系统繁忙，请稍后再试\n{}'.format(e)), flush=True)
+                    return
+                print(color.green('已成功获取答案'), flush=True)
+                # 使用正则表达式按 '/' 分隔字符串
+                parts = re.split(r'/', all_answer)
+                # 转换为字典
+                self.answer_dict = {i : part for i, part in enumerate(parts)}
+                self.finish_title()
             message=self.submit()
             if message=='False':
                 driver.switch_to.frame('iframe')
                 print(color.green('重新做题'), flush=True)
                 Answer(self.driver, self.frame, self.course_name,self.API_KEY)
 
+    def batch_process_questions(self):
+        """分批处理题目，每20道题搜一次，最后一部分题目小于20时与倒数第二部分合并"""
+        total_questions = len(self.questionList0)
+        batch_size = 20
+        self.answer_dict = {}
+
+        # 计算批次数和最后一批的题目数量
+        num_batches = (total_questions + batch_size - 1) // batch_size
+        last_batch_size = total_questions % batch_size
+        if last_batch_size == 0:
+            last_batch_size = batch_size
+
+        # 处理批次
+        batch_start = 0
+        while batch_start < total_questions:
+            # 检查是否是最后一批且题目数小于20
+            if num_batches > 1 and batch_start == total_questions - last_batch_size and last_batch_size < 20:
+                # 如果是最后一批且题目数小于20，则与倒数第二批合并
+                batch_start = total_questions - batch_size - last_batch_size
+                batch_end = total_questions
+                print(color.blue(
+                    f'检测到最后一批题目数量较少({last_batch_size}题)，将与前一批合并搜索第{batch_start + 1}-{batch_end}题的答案...'),
+                      flush=True)
+            else:
+                batch_end = min(batch_start + batch_size, total_questions)
+                print(color.blue(f'正在使用deepseek搜索第{batch_start + 1}-{batch_end}题的答案...'), flush=True)
+
+            batch_questions = self.all_title_list[batch_start:batch_end]
+
+            # 构建当前批次的提示
+            batch_prompt = self.prompt
+            for q in batch_questions:
+                batch_prompt += q + '\n'
+
+            try:
+                batch_answer = self.DeepSeekAsk(batch_prompt).replace('\n','')
+                if batch_answer == '':
+                    print(color.red(f'第{batch_start + 1}-{batch_end}题获取答案失败，跳过该批次'), flush=True)
+                    # 如果是合并批次处理失败，单独处理最后一批
+                    if num_batches > 1 and batch_end == total_questions and last_batch_size < 20:
+                        print(color.blue(f'尝试单独搜索最后{last_batch_size}题的答案...'), flush=True)
+                        batch_start = total_questions - last_batch_size
+                        batch_end = total_questions
+                        batch_questions = self.all_title_list[batch_start:batch_end]
+
+                        # 重新构建提示
+                        batch_prompt = self.prompt
+                        for q in batch_questions:
+                            batch_prompt += q + '\n'
+
+                        try:
+                            batch_answer = self.DeepSeekAsk(batch_prompt).replace('\n','')
+                            if batch_answer == '':
+                                print(color.red(f'单独搜索最后{last_batch_size}题也失败，跳过'), flush=True)
+                                break
+                        except Exception as e:
+                            print(color.red(f'单独搜索最后{last_batch_size}题失败：{e}'), flush=True)
+                            break
+                    else:
+                        batch_start = batch_end
+                        continue
+            except Exception as e:
+                print(color.red(f'第{batch_start + 1}-{batch_end}题搜索失败：{e}'), flush=True)
+                # 如果是合并批次处理失败，单独处理最后一批
+                if num_batches > 1 and batch_end == total_questions and last_batch_size < 20:
+                    print(color.blue(f'尝试单独搜索最后{last_batch_size}题的答案...'), flush=True)
+                    batch_start = total_questions - last_batch_size
+                    batch_end = total_questions
+                    batch_questions = self.all_title_list[batch_start:batch_end]
+
+                    # 重新构建提示
+                    batch_prompt = self.prompt
+                    for q in batch_questions:
+                        batch_prompt += q + '\n'
+
+                    try:
+                        batch_answer = self.DeepSeekAsk(batch_prompt).replace('\n','')
+                        if batch_answer == '':
+                            print(color.red(f'单独搜索最后{last_batch_size}题也失败，跳过'), flush=True)
+                            break
+                    except Exception as e_inner:
+                        print(color.red(f'单独搜索最后{last_batch_size}题失败：{e_inner}'), flush=True)
+                        break
+                else:
+                    batch_start = batch_end
+                    continue
+
+            # 处理当前批次的答案
+            parts = re.split(r'/', batch_answer)
+
+            # 将当前批次的答案添加到总答案字典中
+            for i, part in enumerate(parts):
+                actual_index = batch_start + i
+                if actual_index < total_questions:
+                    self.answer_dict[actual_index] = part
+
+            print(color.green(f'已成功获取第{batch_start + 1}-{batch_end}题的答案'), flush=True)
+
+            # 如果是合并批次，结束循环
+            if num_batches > 1 and batch_end == total_questions and last_batch_size < 20:
+                break
+
+            batch_start = batch_end
+
+        # 执行答题
+        if self.answer_dict:
+            print(color.green('开始答题'), flush=True)
+            self.finish_title()
+        else:
+            print(color.red('未获取到任何答案，无法答题'), flush=True)
 
     def DeepSeekAsk(self,prompt):
         message = {"role": "user", "content": prompt}
@@ -123,6 +241,7 @@ class Answer:
             stream=False
         )
         answer=response.choices[0].message.content
+
         return answer
 
     def finish_title(self):
@@ -250,9 +369,6 @@ class Answer:
         self.driver.switch_to.frame('frame_content')
         try:
             f = open(fr'task\record\《{self.course_name}》的成绩记录.txt', 'a', encoding='utf-8')
-        except:
-            pass
-        try:
             element = self.driver.find_element(By.CSS_SELECTOR, '.achievement i')
             score = element.text
             f.write(
@@ -262,3 +378,4 @@ class Answer:
             f.write(
                 f'已完成:《{title}》章节的测试题，完成时间：{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))}\n测试得分：未查询到(本次使用DeepSeek AI答题)\n\n')
         self.driver.switch_to.default_content()
+

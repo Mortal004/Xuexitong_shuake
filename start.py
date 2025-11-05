@@ -131,12 +131,12 @@ class Start:
 
         # ---------------- 主页 ----------------
         # 启动程序按钮
-        self.start_button = ctk.CTkButton(self.main_frame, text="启动程序",height=40, border_spacing=10,fg_color=self.button_color,
+        self.start_button = ctk.CTkButton(self.main_frame, text="开始刷课",height=40, border_spacing=10,fg_color=self.button_color,
                                           command=lambda: self.start(['python','main.py']), font=self.font,hover_color=self.button_hover_color)
         # self.button1.config(image=self.img)
         self.start_button.grid(row=0, column=0,padx=5, pady=10)
         # 关闭程序按钮
-        self.close_button = ctk.CTkButton(self.main_frame, text="关闭程序",height=40, border_spacing=10,fg_color=self.button_color,
+        self.close_button = ctk.CTkButton(self.main_frame, text="结束刷课",height=40, border_spacing=10,fg_color=self.button_color,
                                           command=self.close,font=self.font,hover_color=self.button_hover_color)
         self.close_button.grid(row=0, column=1,padx=5,  pady=10)
         #更新
@@ -412,14 +412,12 @@ class Start:
             self.radio_var.set(1)
             self.function_choice()
 
-
-
     def shua_ti_choice(self,choice):
         if choice=='DeepSeek AI':
             self.API_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
             self.API_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
             self.show_api_button.grid(row=5, column=3,  pady=5, sticky=tk.W)
-            tk.messagebox.showinfo('提示', '请输入Deepseek API\n如果您自己并未购买API，请前往赞助作者页面对作者进行赞赏，并发送作者邮件获取API')
+            tk.messagebox.showinfo('提示', '请输入Deepseek API\n请前往Deepseek官网购买API')
         else:
             self.API_label.grid_forget()
             self.API_entry.grid_forget()
@@ -466,9 +464,9 @@ class Start:
                     if version == file_name:
                         self.text_box.insert(tk.END, '当前版本为最新版本，无需更新\n')
                     else:
-                        self.text_box.insert(tk.END, '当前版本为旧版本，请前往\n'
+                        self.text_box.insert(tk.END, '是否为最新版本请以作者的通知为准，如需更新可直接前往网盘下载\n'
                                                      '夸克网盘：https://pan.quark.cn/s/eba634db1544\n'
-                                                     '或百度网盘: https://pan.baidu.com/s/1VIR752zNYio4e_QBE8bd2Q?pwd=shua 提取码: shua 下载')
+                                                     '或迅雷网盘链接:https://pan.xunlei.com/s/VO_FdZ-t7lDMpGFgLcuH81DTA1?pwd=viah#')
         except Exception as e:
             self.text_box.insert(tk.END, '连接失败，请检查网络连接\n')
             self.text_box.insert(tk.END, f'错误信息：{e}\n')
@@ -633,7 +631,6 @@ class Start:
         threading.Thread(target=self.run_program,args=(file_name,)).start()
         threading.Thread(target=self.start_button_normal).start()
 
-
     def close(self):
         self.reopen_frame()
         if self.process is not None:
@@ -708,17 +705,17 @@ class Start:
             tk.messagebox.showerror('警告', message='请填写手机号')
             return False
         else:
-            self.account_info['phone_number'] = self.phone_number_entry.get()
+            self.account_info['phone_number'] = self.phone_number_entry.get().replace('\n','')
         if  self.password_entry.get()=='':
             tk.messagebox.showerror('警告', message='请填写密码')
             return False
         else:
-            self.account_info['password'] = self.password_entry.get()
+            self.account_info['password'] = self.password_entry.get().replace('\n','')
         if self.cour_entry.get()=='':
             tk.messagebox.showerror('警告', message='请填写课程名称')
             return False
         else:
-            self.account_info['cour'] = self.cour_entry.get().replace(r'\n', '')
+            self.account_info['cour'] = self.cour_entry.get().replace('\n', '')
         if self.question_entry.get() =='' :
             tk.messagebox.showerror('警告', message='请选择选择刷题设置')
             return False
@@ -738,10 +735,7 @@ class Start:
                 return False
             else:
                 self.account_info['API'] = self.API_entry.get()
-        if self.question_entry.get() == '大学生搜题酱':
-            self.result = tk.messagebox.askokcancel('确认保存', '你确定要保存吗？\n(注意：搜题暂时只能搜索选择题和判断题\n使用DeepSeek可支持全题型作答)')
-        else:
-            self.result = tk.messagebox.askokcancel('确认保存', '你确定要保存吗？\n(使用DeepSeek可支持全题型作答)')
+        self.result = tk.messagebox.askokcancel('确认保存', '你确定要保存吗？\n(使用DeepSeek可支持全题型作答)')
         if self.result:
             tk.messagebox.showinfo('', '保存成功')
             with open(r'task/tool/account_info.json', 'w', encoding='utf-8') as f:

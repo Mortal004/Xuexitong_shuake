@@ -162,43 +162,42 @@ def choice_course(driver, course_name,speed,condition):
     返回:
     无
     """
-    print(color.green(f'正在定位《{course_name}》课程...'),flush=True)
-    # 查找所有课程名称元素
-    course_elements = driver.find_elements(By.CLASS_NAME, 'course-name')
-    if len(course_elements)==0:
-        course_elements = driver.find_elements(By.CLASS_NAME, 'courseName')
-    if len(course_elements)==0:
-        # turn_page(driver, '个人空间')
-        driver.switch_to.frame('frame_content')
-        course_elements = driver.find_elements(By.CSS_SELECTOR, '[class="w_cour_txtH fl"]')
-    # 遍历所有课程元素
-    for course_element in course_elements:
-        # 如果课程元素的标题属性与指定的课程名称匹配
-        if  course_name in course_element.get_attribute('title') or course_name in course_element.text:
-            # 滚动到课程名称元素的位置
-            driver.execute_script("arguments[0].scrollIntoView();", course_element)
-            if condition:
-                set_speed(speed,driver)
-            # 使用 JavaScript 点击课程名称元素
-            driver.execute_script("arguments[0].click();", course_element)
+    try:
+        print(color.green(f'正在定位《{course_name}》课程...'),flush=True)
+        # 查找所有课程名称元素
+        course_elements = driver.find_elements(By.CLASS_NAME, 'course-name')
+        if len(course_elements)==0:
+            course_elements = driver.find_elements(By.CLASS_NAME, 'courseName')
+        if len(course_elements)==0:
+            # turn_page(driver, '个人空间')
+            driver.switch_to.frame('frame_content')
+            course_elements = driver.find_elements(By.CSS_SELECTOR, '[class="w_cour_txtH fl"]')
+        # 遍历所有课程元素
+        for course_element in course_elements:
+            # 如果课程元素的标题属性与指定的课程名称匹配
+            if  course_name in course_element.get_attribute('title') or course_name in course_element.text:
+                # 滚动到课程名称元素的位置
+                driver.execute_script("arguments[0].scrollIntoView();", course_element)
+                if condition:
+                    set_speed(speed,driver)
+                # 使用 JavaScript 点击课程名称元素
+                driver.execute_script("arguments[0].click();", course_element)
 
-            # 打印选择的课程名称
-            print(color.green(f'您已选择观看《{course_name}》'), flush=True)
-            #体验最新版本
-            try:
-                turn_page(driver,course_name)
-                element=driver.find_element(By.CLASS_NAME,'experience')
-                time.sleep(1)
-                element.click()
-                print(color.green('正在体验最新版本'),flush=True)
-                # 遍历所有窗口句柄
-                # choice_course(driver,course_name,speed,False)
-            except:
-                pass
-
-            break
-    else:
-        try:
+                # 打印选择的课程名称
+                print(color.green(f'您已选择观看《{course_name}》'), flush=True)
+                #体验最新版本
+                try:
+                    turn_page(driver,course_name)
+                    element=driver.find_element(By.CLASS_NAME,'experience')
+                    time.sleep(1)
+                    element.click()
+                    print(color.green('正在体验最新版本'),flush=True)
+                    # 遍历所有窗口句柄
+                    # choice_course(driver,course_name,speed,False)
+                except:
+                    pass
+                break
+        else:
             # 体验最新版本
             element=driver.find_element(By.CSS_SELECTOR,".experience")
             print(color.green('正在体验最新版本'), flush=True)
@@ -209,26 +208,17 @@ def choice_course(driver, course_name,speed,condition):
             if len(element)!=0:
                 element[0].click()
                 driver.find_element(By.XPATH,'//*[@id="stukc"]/div[1]/div[1]/div/div/ul/li[1]').click()
-                choice_course(driver,course_name,speed,condition)
-        except :
+            choice_course(driver,course_name,speed,condition)
+        turn_page(driver,course_name)
+    except :
 
-            print(color.red(f"未找到《{course_name}》这门课程，请检查名称是否正确，或手动选择你要刷课的课程，打开该课程后等待片刻"),
-                  flush=True)
-            while len(driver.window_handles)==1:
-                time.sleep(1)
-            # data = []
-            # try:
-            #     with open('task/tool/course_name.json', 'r') as f:
-            #         data = json.load(f)
-            # except FileNotFoundError:
-            #     pass
-            # try:
-            #     data.remove(course_name)
-            # except ValueError:
-            #     pass
-            # with open('task/tool/course_name.json', 'w') as f:
-            #     json.dump(data, f)
-            # sys.exit(1)
+        print(color.red(f"未找到《{course_name}》这门课程，请检查名称是否正确，或手动选择你要刷课的课程，打开该课程后等待片刻"),
+              flush=True)
+        while len(driver.window_handles)==1:
+            time.sleep(1)
+        turn_page(driver, course_name)
+        set_speed(speed, driver)
+
     turn_page(driver,course_name)
 
 def check_face(driver):
@@ -245,6 +235,12 @@ def find_mission(driver):
         # 体验最新版本
         element = driver.find_element(By.CLASS_NAME, 'experience')
         print(color.green('正在体验最新版本'), flush=True)
+        element.click()
+    except:
+        pass
+    #点击开始学习
+    try:
+        element=driver.find_element(By.CSS_SELECTOR,'[CLASS="start-study readclosecoursepop"]')
         element.click()
     except:
         pass
@@ -328,7 +324,7 @@ def page_message(driver):
         except:
             pass
     try:
-        driver.find_element(By.XPATH,'//iframe[@src="/ananas/modules/work/index.html?v=2024-1212-1629&castscreen=0"]')
+        driver.find_element(By.XPATH,'//iframe[@src="/ananas/modules/work/index.html?v=2025-1028-1629&castscreen=0"]')
         page_message_lst.append('test')
     except:
         pass
@@ -345,13 +341,13 @@ def run(driver,choice,course_name,API,lock_screen,speed):
             if 'ppt' in page_message_lst:
                 __ppt(driver)
             if 'vido' in page_message_lst:
-                study_page(driver,course_name,lock_screen,speed)
+                study_page(driver,course_name,lock_screen)
             if 'test' in page_message_lst:
                 if choice!='不刷题':
                     driver.switch_to.default_content()
                     driver.switch_to.frame('iframe')
                     test_frames = driver.find_elements(By.XPATH,
-                                                       '//iframe[@src="/ananas/modules/work/index.html?v=2024-1212-1629&castscreen=0"]')
+                                                       '//iframe[@src="/ananas/modules/work/index.html?v=2025-1028-1629&castscreen=0"]')
                     print(color.magenta(f'已检测到{len(test_frames)}个测试'), flush=True)
                     for test_frame in test_frames:
                         try:
@@ -411,7 +407,9 @@ def main(phone_number,password,course_name,choice,speed,API,lock_screen):
     choice_course(driver,course_name,speed,True)
     check_face(driver)
     find_mission(driver)
+    check_face(driver)
     turn_page(driver,'学生学习页面')
+    check_face(driver)
     fold(driver)
     run(driver,choice,course_name,API,lock_screen,speed)
 
