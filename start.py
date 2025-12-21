@@ -17,7 +17,7 @@ from colorama import Fore
 from tkinter import ttk, messagebox, filedialog
 import requests
 import os
-import shutil
+
 import customtkinter as ctk
 
 
@@ -126,7 +126,8 @@ class Start:
         self.time_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=tk.W)
         #声明
         self.copyright_label = ctk.CTkLabel(self.label_frame,font=self.font,
-                                            text="声明：该脚本仅用于托管完成学习通的课程，不可用作商用\n(在电脑上开启脚本后不需要人为监管，可自动看视频和完成题目)\n", fg_color='transparent')
+                                            text="注意：该脚本不可用作商用,使用该脚本产生的任何后果由使用者\n"
+                                                 "自行承担,开发者不承担任何责任", fg_color='transparent')
         self.copyright_label.grid(row=1, column=0, columnspan=2, sticky=tk.W+tk.E)
 
         # ---------------- 主页 ----------------
@@ -211,11 +212,6 @@ class Start:
         self.score_txt = ctk.CTkTextbox(self.score_frame,height=527,width=435,font=self.font,fg_color='transparent')
         self.score_txt.configure(state=tk.DISABLED)
         self.score_txt.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky=tk.W+tk.E+tk.N+tk.S)  # 使用 sticky 参数使组件填满整个单元格
-
-        #error_frame页面
-        self.error_text = ctk.CTkTextbox(self.error_frame, height=530, width=437,font=self.font,fg_color='transparent')
-        self.error_text.configure(state=tk.DISABLED)
-        self.error_text.grid()
 
         # ---------------- 设置 ----------------
         self.style=ttk.Style()
@@ -359,14 +355,20 @@ class Start:
         #----------------帮助页面----------------
         with open(r'task\tool\Help.txt', 'r', encoding='utf-8') as f:
             self.text = f.read()
-        self.help_txt = ctk.CTkTextbox(self.help_frame,height=627,width=430,font=self.font,fg_color='transparent')
-        self.help_txt.grid()
+        self.help_txt = ctk.CTkTextbox(self.help_frame,height=600,width=500,font=self.font,fg_color='transparent')
+        self.help_txt.grid(pady=20)
         self.help_txt.insert(tk.END, self.text)
         self.help_txt.configure(state=tk.DISABLED)
 
+
+        #----------------报错日志----------------
+        self.error_text = ctk.CTkTextbox(self.error_frame, height=600, width=497,font=self.font,fg_color='transparent')
+        self.error_text.configure(state=tk.DISABLED)
+        self.error_text.grid(pady=20)
+
         #----------------赞助页面----------------
         self.label1 = ctk.CTkLabel(self.money_frame, text="如果对您有帮助，欢迎给我打赏,各位的支持就是我更新的最大动力\n"
-                                                          "(PS:会优先解决打赏的人出现的问题哦！)\n邮箱地址：2022865286@qq.com",
+                                                          "邮箱地址：2022865286@qq.com",
                                    font=self.font,fg_color='transparent')
         self.label1.grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky=tk.W)
         # 加载图片
@@ -382,6 +384,94 @@ class Start:
         self.load_data()
         self.show_main()
         self.function_choice()
+        if self.user_notice=='True':
+            # 在初始化完成后显示用户须知弹窗
+            self.show_user_notice()
+
+    def show_user_notice(self):
+        """显示用户须知弹窗"""
+        # 创建顶层窗口
+        notice_window = tk.Toplevel(self.root)
+        notice_window.title("用户须知")
+        # notice_window.geometry("500x400")
+        notice_window.resizable(False, False)
+
+        # 设置窗口模态，阻止用户操作主窗口
+        notice_window.transient(self.root)
+        notice_window.grab_set()
+
+        # 将窗口置于最前端
+        notice_window.wm_attributes("-topmost", True)
+
+        # 用户须知内容
+        notice_content = """欢迎使用学习通刷课程序！
+
+    【重要声明】
+    1. 本软件仅供个人学习交流使用，不得用于任何商业用途。
+    2. 使用本软件产生的任何后果由使用者自行承担，开发者不承担任何责任。
+    3. 请遵守学校相关规定，合理使用本软件辅助学习。
+    4. 不得恶意利用本软件进行任何违规行为。
+    5. 开发者保留对本软件的最终解释权。
+
+    【使用说明】
+    1. 请先在设置页面正确填写账户信息和相关配置。
+    2. 建议在稳定的网络环境下使用本软件。
+    3. 如遇到问题，请查看用户须知文档或联系作者。
+    4. 请勿频繁使用高速倍速播放功能，以免触发平台检测机制。
+
+    请您仔细阅读以上内容，使用本软件即表示您同意遵守上述条款。
+    """
+
+        # 创建文本框显示用户须知
+        text_widget = tk.Text(notice_window, wrap=tk.WORD, font=("微软雅黑", 12),height=16,width=65)
+        text_widget.insert(tk.END, notice_content)
+        text_widget.config(state=tk.DISABLED)
+
+       # 布局
+        text_widget.grid(row=0, column=0,  padx=10, pady=10)
+
+        # 创建按钮框架
+        button_frame = tk.Frame(notice_window)
+        button_frame.grid(row=1,column=0,pady=10)
+
+        # 倒计时变量
+        self.remaining_time = 10
+        self.confirm_button = tk.Button(button_frame, text=f"确认 ({self.remaining_time}s)",width=7,height=1,font=("微软雅黑", 13),
+                                        state=tk.DISABLED, command=lambda: self.close_notice(notice_window))
+        self.cancel_button = tk.Button(button_frame,width=6,height=1, text="取消", command=lambda: self.exit_program(),font=("微软雅黑", 13))
+
+        self.confirm_button.pack(side=tk.LEFT, padx=10)
+        self.cancel_button.pack(side=tk.LEFT, padx=10)
+
+        # 启动倒计时
+        self.countdown(notice_window)
+
+        # 居中显示窗口
+        notice_window.update_idletasks()
+        x = (notice_window.winfo_screenwidth() // 2) - (notice_window.winfo_width() // 2)
+        y = (notice_window.winfo_screenheight() // 2) - (notice_window.winfo_height() // 2)
+        notice_window.geometry(f"+{x}+{y}")
+        # 禁止关闭窗口按钮
+        notice_window.protocol("WM_DELETE_WINDOW", lambda: None)
+
+    def countdown(self, window):
+        """倒计时函数"""
+        if self.remaining_time > 0:
+            self.confirm_button.config(text=f"确认 ({self.remaining_time}s)")
+            self.remaining_time -= 1
+            window.after(1000, lambda: self.countdown(window))
+        else:
+            self.confirm_button.config(text="确认", state=tk.NORMAL)
+
+    def close_notice(self, window):
+        """关闭用户须知窗口"""
+        window.destroy()
+
+    def exit_program(self):
+        """退出程序"""
+        self.root.quit()
+        self.root.destroy()
+        # os._exit(0)
 
     def show_password(self):
         if self.password_entry.cget('show') == '*':
@@ -417,7 +507,7 @@ class Start:
             self.API_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
             self.API_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
             self.show_api_button.grid(row=5, column=3,  pady=5, sticky=tk.W)
-            tk.messagebox.showinfo('提示', '请输入Deepseek API\n请前往Deepseek官网购买API')
+            tk.messagebox.showinfo('提示', '请输入Deepseek API\n如果您自己并未购买API，请前往赞助作者页面对作者进行赞赏，并发送作者邮件获取API')
         else:
             self.API_label.grid_forget()
             self.API_entry.grid_forget()
@@ -687,6 +777,7 @@ class Start:
                 self.account_info = json.load(f)
         except FileNotFoundError:
             self.account_info = {}
+        self.account_info['user_notice']='False'
         if self.browser_entry.get()=='':
             tk.messagebox.showerror('警告', message='请选择浏览器')
             return False
@@ -754,6 +845,7 @@ class Start:
                     self.cour_entry.configure(values= tuple(data))
             with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as fil:
                 self.account_info = json.load(fil)
+                self.user_notice=self.account_info['user_notice']
                 self.course_score_entry.set( self.account_info['cour'])
                 self.course_vido_entry.set( self.account_info['cour'])
                 self.browser_entry.set( self.account_info['browser'])

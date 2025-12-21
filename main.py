@@ -8,6 +8,8 @@ import pickle
 import sys
 import time
 import traceback
+
+from mpmath import chebyt
 from selenium.webdriver.support import expected_conditions as EC
 import pyautogui
 from selenium.common import NoSuchDriverException, NoSuchWindowException, WebDriverException, \
@@ -18,8 +20,8 @@ from selenium.webdriver.common.by import By
 from selenium import webdriver
 from task.tool import color
 from task.watch_ppt import __ppt
-from task.watch_vido import study_page
-from task.quiz_deepseek  import Answer
+from task.watch_vido import study_page,check_face
+from task.quiz  import Answer
 from task.tool.send_wx import send_error
 
 def get_cookie(driver):
@@ -30,7 +32,7 @@ def get_cookie(driver):
         print(color.red(f'获取cookie失败'),flush=True)
         error_msg = traceback.format_exc()
         send_error(
-            "看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)" + error_msg)
+            "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n" + error_msg)
         return False
 
 def auto_login_with_cookies(driver):
@@ -85,7 +87,7 @@ def auto_login_with_cookies(driver):
         print(color.red(f"自动登录过程中出错"),flush=True)
         error_msg = traceback.format_exc()
         send_error(
-            "看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)" + error_msg)
+            "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n" + error_msg)
         return False
 
 def login_study(driver,phone_number,password):
@@ -214,21 +216,15 @@ def choice_course(driver, course_name,speed,condition):
 
         print(color.red(f"未找到《{course_name}》这门课程，请检查名称是否正确，或手动选择你要刷课的课程，打开该课程后等待片刻"),
               flush=True)
-        while len(driver.window_handles)==1:
+        now_window_handles=len(driver.window_handles)
+        while len(driver.window_handles)==now_window_handles:
             time.sleep(1)
+        time.sleep(2)
         turn_page(driver, course_name)
         set_speed(speed, driver)
+        return
 
     turn_page(driver,course_name)
-
-def check_face(driver):
-    while True:
-        try:
-            driver.find_element(By.CSS_SELECTOR,"[class='popDiv wid640 faceCollectQrPop popClass']")
-            print(color.red('请按照要求手机扫码进行人脸认证'),flush=True)
-            time.sleep(2)
-        except:
-            break
 
 def find_mission(driver):
     try:
@@ -282,9 +278,12 @@ def turn_page(driver,page_name):
     #折叠侧边目录
 
 def fold(driver):
-    element = driver.find_element(By.XPATH, '//*[@id="selector"]/div[2]')
-    element.click()
-    time.sleep(1)
+    try:
+        element = driver.find_element(By.XPATH, '//*[@id="selector"]/div[2]')
+        element.click()
+        time.sleep(1)
+    except:
+        pass
 
 def set_speed(speed,driver):
     print(color.blue(f'调节倍数为：{speed}X'), flush=True)
@@ -330,7 +329,7 @@ def page_message(driver):
         pass
     return page_message_lst
 
-def run(driver,choice,course_name,API,lock_screen,speed):
+def run(driver,choice,course_name,API,lock_screen):
     while True:
         print(color.green('正在检测页面内容'), flush=True)
         page_message_lst=page_message(driver)
@@ -354,7 +353,7 @@ def run(driver,choice,course_name,API,lock_screen,speed):
                             Answer(driver,test_frame,course_name,API)
                         except :
                             error_msg = traceback.format_exc()
-                            send_error(error_msg)
+                            send_error("\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n"+error_msg)
                             print(color.yellow('出错了，具体原因请前往错误日志查看，请自行保存或提交,15秒后继续'), flush=True)
                             time.sleep(15)
                 else:
@@ -373,17 +372,12 @@ def run(driver,choice,course_name,API,lock_screen,speed):
             pass
         time.sleep(1)
 
-def main(phone_number,password,course_name,choice,speed,API,lock_screen):
+def start_browser(browser,driver_path):
     print(color.green('启动浏览器中...'), flush=True)
-    with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as f:
-        browser_info = json.load(f)
-    # 设置ChromeDriver的路径
-    driver_path = browser_info['driver_path']
-    browser=browser_info['browser']
-    if browser=='chrome':
+    if browser == 'chrome':
         from selenium.webdriver.chrome.service import Service
         from selenium.webdriver.chrome.options import Options
-    else :
+    else:
         from selenium.webdriver.edge.service import Service
         from selenium.webdriver.edge.options import Options
     # 创建Driver服务
@@ -393,15 +387,17 @@ def main(phone_number,password,course_name,choice,speed,API,lock_screen):
     options.add_extension(r"task\tool\speed.crx")
     options.add_argument("--enable-extensions")
     options.add_argument("--disable-web-security")
-
-    if browser=='edge':
-
+    if browser == 'edge':
         driver = webdriver.Edge(service=service, options=options)
     else:
         # 初始化Chrome浏览器
         driver = webdriver.Chrome(service=service, options=options)
     # driver.maximize_window()
     driver.implicitly_wait(2)
+    return driver
+
+def main(browser,driver_path,phone_number,password,course_name,choice,speed,API,lock_screen):
+    driver=start_browser(browser,driver_path)
     # set_speed_extension(driver,browser)
     login_study(driver,phone_number,password)
     choice_course(driver,course_name,speed,True)
@@ -411,7 +407,7 @@ def main(phone_number,password,course_name,choice,speed,API,lock_screen):
     turn_page(driver,'学生学习页面')
     check_face(driver)
     fold(driver)
-    run(driver,choice,course_name,API,lock_screen,speed)
+    run(driver,choice,course_name,API,lock_screen)
 
 def set_speed_extension(driver,browser):
     #打开设置页面
@@ -452,27 +448,27 @@ if __name__ == '__main__':
         with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as fil:
             account_info = json.load(fil)
         try:
-            main(account_info['phone_number'],account_info['password'],account_info['cour'],
+            main(account_info['browser'],account_info['driver_path'],account_info['phone_number'],account_info['password'],account_info['cour'],
                  account_info['choice'],account_info['speed'],account_info['API'],account_info['lock_screen'])
         except NoSuchWindowException as e:
             print(color.red('窗口意外关闭'),flush=True)
         except SessionNotCreatedException as e:
             error_msg = traceback.format_exc()
             send_error(
-                "看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)" + error_msg)
+                "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n" + error_msg)
             print(color.red('无法正常运行驱动，请检查地址是否正确，或根据用户须知检查版本是否与浏览器一致，如果不一致，'
                             '请根据用户须知的指导前往下载相应版本的驱动，如果一致，请更换另外一个浏览器，但也要注意浏览器与驱动的版本是否一致，'
-                            '如果还是不行，请重新下载脚本或关机重启。'),flush=True)
+                            '如果还是不行，请重新下载脚本或关机重启或查看报错日志'),flush=True)
         except WebDriverException as e:
             if 'ERR_INTERNET_DISCONNECTED' in str(e) or 'ERR_NAME_NOT_RESOLVED' in str(e):
                 print(color.red('你网都没连，刷个屁的课啊'),flush=True)
             else:
                 print(color.red('出错了，具体原因请前往错误日志查看'),flush=True)
                 error_msg = traceback.format_exc()
-                send_error("看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)"+error_msg)
+                send_error("\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n"+error_msg)
         except Exception as e:
             error_msg = traceback.format_exc()
-            send_error("看报错信息自己如果无法解决,可以将错误信息发送至邮箱2022865286@qq.com (PS:赞助作者可优先解决)"+error_msg)
+            send_error("\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n"+error_msg)
             print(color.red('出错了，具体原因请前往错误日志查看'),flush=True)
     except FileNotFoundError:
         print(color.red('未填写信息或未保存，请前往设置页面重新设置'),flush=True)

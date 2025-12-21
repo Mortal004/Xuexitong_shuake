@@ -333,8 +333,8 @@ class Answer:
                 ans_num+=1
             else:
                 print(color.red(f'该题为{self.questionType_list[num]}，暂时无法作答'), flush=True)
-        self.ans_rate=ans_num/len(self.answer_dict)
-        print(ans_num,'/',len(self.answer_dict))
+        self.ans_rate=ans_num/len(self.questionList0)
+        print(ans_num,'/',len(self.questionList0))
 
     def submit(self):
         formatted_result = "{:.2%}".format(self.ans_rate)

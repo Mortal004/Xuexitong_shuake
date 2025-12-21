@@ -78,12 +78,17 @@ def video_question(driver):
         return
 
 def check_face(driver):
-    while True:
+    i=0
+    while i<=20:
         try:
             driver.find_element(By.CSS_SELECTOR,"[class='popDiv1 wid640  faceCollectQrPopVideo  popClass faceRecognition_0']")
-            print(color.red('请按照要求手机扫码进行人脸认证'),flush=True)
+            if i==0:
+                print(color.red('请按照要求手机扫码进行人脸认证,如有误判将在20秒后默认您以完成认证'),flush=True)
             time.sleep(1)
+            i+=1
         except:
+            if i!=0:
+                print(color.red('人脸认证已完成'), flush=True)
             break
 
 def check_vido_play(driver,last_time,current_time):
@@ -106,8 +111,15 @@ def check_vido_play(driver,last_time,current_time):
                     account_info = json.load(f)
                     speed=account_info['speed']
                     try:
-                        print(color.red(f'当前视频已被设置不能调节高倍数，现在将倍数调至1倍'), flush=True)
-                        for j in range(int(int(speed) - 1) * 10):
+                        if int(speed)>2:
+                            print(color.red(f'当前视频已被设置不能调节高倍数，现在将倍数调至2倍'), flush=True)
+                            new_speed=2
+                            account_info['speed'] = '2'
+                        else:
+                            new_speed=1
+                            print(color.red(f'当前视频已被设置不能调节高倍数，现在将倍数调至1倍'), flush=True)
+                            account_info['speed'] = '1'
+                        for j in range(int(int(speed) - new_speed) * 10):
                             pyautogui.press('a')
                             action = ActionChains(driver)
                             action.send_keys('a').perform()
@@ -120,7 +132,6 @@ def check_vido_play(driver,last_time,current_time):
                             print(color.yellow(f'点击播放失败'), flush=True)
                     except:
                         pass
-                    account_info['speed']='1'
                     with open(r'task/tool/account_info.json', 'w', encoding='utf-8') as fil:
                         json.dump(account_info, fil)
             except:
