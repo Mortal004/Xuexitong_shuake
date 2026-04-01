@@ -102,7 +102,7 @@ class Answer:
                 self.prompt += self.all_title
                 print(color.blue('正在使用deepseek搜索该测试所有题目答案...'), flush=True)
                 try:
-                    all_answer = self.DeepSeekAsk(self.prompt,True).replace('\n','')
+                    all_answer = self.DeepSeekAsk(self.prompt).replace('\n','')
                     if all_answer=='':
                         return
                 except Exception as e:
