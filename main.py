@@ -3,17 +3,17 @@
 # This software is provided for non-commercial use only.
 # For more information, see the LICENSE file in the root directory of this project.
 
+#打包python -m PyInstaller --onefile --collect-all selenium main.py
 import json
 import pickle
+import re
 import sys
 import time
 import traceback
-
-from mpmath import chebyt
 from selenium.webdriver.support import expected_conditions as EC
 import pyautogui
 from selenium.common import NoSuchDriverException, NoSuchWindowException, WebDriverException, \
-    ElementNotInteractableException, SessionNotCreatedException
+    ElementNotInteractableException, SessionNotCreatedException,NoSuchElementException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
@@ -21,19 +21,24 @@ from selenium import webdriver
 from task.tool import color
 from task.watch_ppt import __ppt
 from task.watch_vido import study_page,check_face
-from task.quiz  import Answer
+from task.quiz_ai import Answer
 from task.tool.send_wx import send_error
+from task.do_work import do_work
 
 def get_cookie(driver):
     try:
         pickle.dump(driver.get_cookies(), open(r'task/tool/cookies.pkl', 'wb'))
         return True
-    except Exception as e:
+    except PermissionError:
+        print(color.red('请在关闭该窗口后，再右键点击刷课程序用管理员权限打开'))
+        return False
+    except Exception :
         print(color.red(f'获取cookie失败'),flush=True)
         error_msg = traceback.format_exc()
         send_error(
             "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n" + error_msg)
-        return False
+        return True
+
 
 def auto_login_with_cookies(driver):
     if not driver.title=='用户登录':
@@ -123,8 +128,10 @@ def login_study(driver,phone_number,password):
         print(color.red('登陆失败，请打开手机端学习通，扫码登录'), flush=True)
         while driver.title=='用户登录':
             time.sleep(1)
-    get_cookie(driver)
-    print(color.green('登录成功'), flush=True)
+    if get_cookie(driver):
+        print(color.green('登录成功'), flush=True)
+    else:
+        return
     # 转到页面内窗口
     #点击课程
     try:
@@ -134,8 +141,12 @@ def login_study(driver,phone_number,password):
         try:
             driver.find_element(By.CSS_SELECTOR, '[title*="课程"]').click()
             time.sleep(1)
-        except:
-            pass
+        except NoSuchElementException:
+            try:
+                driver.find_element(By.CSS_SELECTOR, '[title*="首页"]').click()
+                time.sleep(1)
+            except:
+                pass
     try:
         time.sleep(3)
         driver.switch_to.frame('frame_content')
@@ -152,7 +163,31 @@ def login_study(driver,phone_number,password):
     except:
         pass
 
-def choice_course(driver, course_name,speed,condition):
+def save_course_lst(driver,class_name,course_elements,phone_number):
+    have_task_course_element=driver.find_element(By.ID,'stuNormalCourseListDiv')
+    new_course_elements=have_task_course_element.find_elements(By.CLASS_NAME,class_name)
+    if len(course_elements)==0:
+        new_course_elements=course_elements
+    course_list = [course_element.get_attribute('title') for course_element in new_course_elements if
+                   course_element.get_attribute('title')!= '']
+    if len(course_list) == 0:
+        print(color.red(f'获取课程列表失败'), flush=True)
+    else:
+        try:
+            with open(r'task/tool/course_name.json', 'r', encoding='utf-8') as f:
+                dit = json.load(f)
+            with open(r'task/tool/course_name.json', 'w', encoding='utf-8') as f:
+                new_list = dit.get(phone_number,[]) + course_list
+                # 去重
+                new_list = list(set(new_list))
+                account_course_dict= {phone_number: new_list}
+                json.dump(account_course_dict, f)
+            print(color.green(f'保存课程列表成功,共有{len(new_list)}个课程'), flush=True)
+        except:
+            print(color.red('保存课程列表失败'), flush=True)
+
+
+def choice_course(driver, course_name,speed,condition,task_type,phone_number):
     # time.sleep(200)
     """
     选择指定名称的课程
@@ -165,15 +200,19 @@ def choice_course(driver, course_name,speed,condition):
     无
     """
     try:
-        print(color.green(f'正在定位《{course_name}》课程...'),flush=True)
+        print(color.green(f'正在定位《{course_name}》...'),flush=True)
         # 查找所有课程名称元素
         course_elements = driver.find_elements(By.CLASS_NAME, 'course-name')
+        class_name="course-name"
         if len(course_elements)==0:
             course_elements = driver.find_elements(By.CLASS_NAME, 'courseName')
+            class_name="courseName"
         if len(course_elements)==0:
             # turn_page(driver, '个人空间')
             driver.switch_to.frame('frame_content')
             course_elements = driver.find_elements(By.CSS_SELECTOR, '[class="w_cour_txtH fl"]')
+            class_name="w_cour_txtH fl"
+        save_course_lst(driver,class_name,course_elements,phone_number)
         # 遍历所有课程元素
         for course_element in course_elements:
             # 如果课程元素的标题属性与指定的课程名称匹配
@@ -181,12 +220,12 @@ def choice_course(driver, course_name,speed,condition):
                 # 滚动到课程名称元素的位置
                 driver.execute_script("arguments[0].scrollIntoView();", course_element)
                 if condition:
-                    set_speed(speed,driver)
+                    set_speed(speed,driver,task_type)
                 # 使用 JavaScript 点击课程名称元素
                 driver.execute_script("arguments[0].click();", course_element)
 
                 # 打印选择的课程名称
-                print(color.green(f'您已选择观看《{course_name}》'), flush=True)
+                print(color.green(f'您已选择《{course_name}》'), flush=True)
                 #体验最新版本
                 try:
                     turn_page(driver,course_name)
@@ -210,7 +249,7 @@ def choice_course(driver, course_name,speed,condition):
             if len(element)!=0:
                 element[0].click()
                 driver.find_element(By.XPATH,'//*[@id="stukc"]/div[1]/div[1]/div/div/ul/li[1]').click()
-            choice_course(driver,course_name,speed,condition)
+            choice_course(driver,course_name,speed,condition,task_type,phone_number)
         turn_page(driver,course_name)
     except :
 
@@ -221,12 +260,12 @@ def choice_course(driver, course_name,speed,condition):
             time.sleep(1)
         time.sleep(2)
         turn_page(driver, course_name)
-        set_speed(speed, driver)
+        set_speed(speed, driver,task_type)
         return
 
     turn_page(driver,course_name)
 
-def find_mission(driver):
+def find_mission(driver,task_type):
     try:
         # 体验最新版本
         element = driver.find_element(By.CLASS_NAME, 'experience')
@@ -240,14 +279,18 @@ def find_mission(driver):
         element.click()
     except:
         pass
-    # 点击章节标签
+    # 点击章节/作业标签
     elements=driver.find_elements(By.CLASS_NAME, 'nav_content')
     for element in elements:
-        if element.text== '章节':
+        if element.text== task_type:
             element.click()
             break
+
+
+    driver.switch_to.frame(driver.find_element(By.TAG_NAME,'iframe'))
     # 切换到名为 frame_content-zj 的 iframe
-    driver.switch_to.frame("frame_content-zj")
+    if task_type == '作业':
+        return
     try:
         # 查找待完成任务点的元素
         element = driver.find_element(By.CSS_SELECTOR, '.catalog_tishi120')
@@ -285,7 +328,9 @@ def fold(driver):
     except:
         pass
 
-def set_speed(speed,driver):
+def set_speed(speed,driver,task_type):
+    if task_type == '作业':
+        return
     print(color.blue(f'调节倍数为：{speed}X'), flush=True)
     try:
         speed=int(speed)-1
@@ -303,6 +348,7 @@ def set_speed(speed,driver):
 def page_message(driver):
     driver.switch_to.default_content()
     page_message_lst=[]
+    driver.implicitly_wait(0)
     try:
         iframe = driver.find_element(By.ID, 'iframe')
         driver.switch_to.frame(iframe)
@@ -310,7 +356,7 @@ def page_message(driver):
         return page_message_lst
     try:
         driver.find_element(By.CSS_SELECTOR, '[class="ans-attach-online ans-insertvideo-online"]')
-        page_message_lst.append('vido')
+        page_message_lst.append('视频')
     except:
         pass
     try:
@@ -324,9 +370,10 @@ def page_message(driver):
             pass
     try:
         driver.find_element(By.XPATH,'//iframe[@src="/ananas/modules/work/index.html?v=2025-1028-1629&castscreen=0"]')
-        page_message_lst.append('test')
+        page_message_lst.append('测验')
     except:
         pass
+    driver.implicitly_wait(2)
     return page_message_lst
 
 def run(driver,choice,course_name,API,lock_screen):
@@ -339,9 +386,9 @@ def run(driver,choice,course_name,API,lock_screen):
             print(color.green(f'该页面含有{page_message_lst}'),flush=True)
             if 'ppt' in page_message_lst:
                 __ppt(driver)
-            if 'vido' in page_message_lst:
+            if '视频' in page_message_lst:
                 study_page(driver,course_name,lock_screen)
-            if 'test' in page_message_lst:
+            if '测验' in page_message_lst:
                 if choice!='不刷题':
                     driver.switch_to.default_content()
                     driver.switch_to.frame('iframe')
@@ -350,11 +397,11 @@ def run(driver,choice,course_name,API,lock_screen):
                     print(color.magenta(f'已检测到{len(test_frames)}个测试'), flush=True)
                     for test_frame in test_frames:
                         try:
-                            Answer(driver,test_frame,course_name,API)
+                            Answer(driver,test_frame,course_name,API,choice)
                         except :
                             error_msg = traceback.format_exc()
                             send_error("\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n"+error_msg)
-                            print(color.yellow('出错了，具体原因请前往错误日志查看，请自行保存或提交,15秒后继续'), flush=True)
+                            print(color.yellow('❌ 出错了，具体原因请前往错误日志查看，请自行保存或提交,15秒后继续'), flush=True)
                             time.sleep(15)
                 else:
                     print(color.yellow('您已选择不刷题，即将跳过测试题'),flush=True)
@@ -363,7 +410,7 @@ def run(driver,choice,course_name,API,lock_screen):
         try:
             driver.find_element(By.XPATH, '//*[@id="prevNextFocusNext"]').click()
         except ElementNotInteractableException:
-            print(color.red('该课程全部已完结，撒花！！！'), flush=True)
+            print(color.red('🎉 🎉 该课程全部已完结，撒花！！！'), flush=True)
             break
         # 确认
         try:
@@ -387,34 +434,43 @@ def start_browser(browser,driver_path):
     options.add_extension(r"task\tool\speed.crx")
     options.add_argument("--enable-extensions")
     options.add_argument("--disable-web-security")
-    if browser == 'edge':
-        driver = webdriver.Edge(service=service, options=options)
+
+    if browser == 'chrome':
+        driver = webdriver.Chrome(service=service, options=options)
     else:
         # 初始化Chrome浏览器
-        driver = webdriver.Chrome(service=service, options=options)
+        driver = webdriver.Edge(service=service, options=options)
+        # 4. 执行JavaScript修改环境
+
     # driver.maximize_window()
     driver.implicitly_wait(2)
     return driver
 
-def main(browser,driver_path,phone_number,password,course_name,choice,speed,API,lock_screen):
-    driver=start_browser(browser,driver_path)
+
+def main(browser, driver_path, phone_number, password, choice, course_name, API, lock_screen,speed, task_type,homework):
+    driver = start_browser(browser, driver_path)
     # set_speed_extension(driver,browser)
-    login_study(driver,phone_number,password)
-    choice_course(driver,course_name,speed,True)
+    login_study(driver, phone_number, password)
+    choice_course(driver, course_name, speed, True, task_type,phone_number)
+    time.sleep(1)
     check_face(driver)
-    find_mission(driver)
+    find_mission(driver,task_type)
+    if task_type=='作业':
+        do_work(driver,course_name,homework,API)
+        return
     check_face(driver)
-    turn_page(driver,'学生学习页面')
+    turn_page(driver, '学生学习页面')
     check_face(driver)
     fold(driver)
-    run(driver,choice,course_name,API,lock_screen)
+    run(driver, choice, course_name, API, lock_screen)
 
-def set_speed_extension(driver,browser):
-    #打开设置页面
+
+def set_speed_extension(driver, browser):
+    # 打开设置页面
     time.sleep(2)
     driver.get(f'{browser}://extensions/?id=mjhlabbcmjflkpjknnicihkfnmbdfced')
-    if browser=='edge':
-        driver.find_element(By.ID,'itemOptions').click()
+    if browser == 'edge':
+        driver.find_element(By.ID, 'itemOptions').click()
         driver.refresh()  # 使用 Selenium 刷新
         time.sleep(2)
         # 获取所有标签页句柄并切换到最新标签页
@@ -443,32 +499,120 @@ def set_speed_extension(driver,browser):
     element.clear()
     element.send_keys('1')
 
-if __name__ == '__main__':
+
+def extract_browser_versions(error_text):
+    """从错误信息中提取浏览器和驱动版本"""
+
+    versions = {
+        'driver_supported_version': None,  # 驱动支持的版本
+        'browser_version': None,  # 浏览器当前版本
+        'browser_type': None  # 浏览器类型
+    }
+
+    # 模式1: 匹配ChromeDriver/EdgeDriver支持的版本
+    # 兼容两种格式:
+    # 1. This version of ChromeDriver only supports Chrome version 140
+    # 2. This version of EdgeDriver only supports Microsoft Edge version 120
+    driver_pattern = r'This version of (ChromeDriver|Microsoft Edge WebDriver) only supports (?:Chrome|Microsoft Edge) version (\d+)'
+    driver_match = re.search(driver_pattern, error_text)
+
+    if driver_match:
+        versions['browser_type'] = driver_match.group(1).replace('Driver', '')
+        versions['driver_supported_version'] = driver_match.group(2)
+
+    # 模式2: 匹配当前浏览器版本
+    # 兼容多种格式:
+    # 1. Current browser version is 143.0.7499.193
+    # 2. Current Microsoft Edge version is 120.0.2210.91
+    browser_pattern = r'Current (?:browser|Microsoft Edge) version is ([\d.]+)'
+    browser_match = re.search(browser_pattern, error_text)
+
+    if browser_match:
+        versions['browser_version'] = browser_match.group(1)
+
+    return versions
+
+
+def parse_versions_from_text(error_text):
+    """从文本中解析版本信息的完整函数"""
+
+    # 提取版本信息
+    versions = extract_browser_versions(error_text)
+
+    # 打印结果
+    print(color.red("=" * 50))
+    print("版本信息分析结果:")
+    print("=" * 50)
+
+    if versions['browser_type']:
+        print(f"浏览器类型: {versions['browser_type']}")
+
+    if versions['driver_supported_version']:
+        print(f"驱动支持版本: {versions['driver_supported_version']}")
+
+    if versions['browser_version']:
+        print(f"浏览器当前版本: {versions['browser_version']}")
+
+    # 给出建议
+    print("\n" + "=" * 50)
+    print("问题诊断和建议:")
+    print("=" * 50)
+
+    if versions['browser_type'] and versions['driver_supported_version'] and versions['browser_version']:
+        driver_ver = int(versions['driver_supported_version'])
+        browser_main_ver = int(versions['browser_version'].split('.')[0])
+
+        if browser_main_ver > driver_ver:
+            print(f"❌ 版本不兼容: {versions['browser_type']}浏览器版本(v{browser_main_ver})过高，"
+                  f"但驱动仅支持到v{driver_ver}")
+            print(f"📋 解决方案:")
+            print(f"  1. 下载{versions['browser_type']}Driver {browser_main_ver}的版本")
+            print(f"  2. 或降级{versions['browser_type']}浏览器到{driver_ver}版本")
+        elif browser_main_ver < driver_ver:
+            print(f"⚠️  浏览器版本(v{browser_main_ver})可能过旧")
+            print(f"📋 建议: 更新{versions['browser_type']}浏览器到最新版本")
+        else:
+            print(f"✅ 版本匹配: {versions['browser_type']}浏览器和驱动版本一致")
+
+    print("\n相关下载链接:")
+    if versions['browser_type'] == 'Chrome':
+        print("  • 谷歌驱动: https://chromedriver.chromium.org/")
+        print("  • Chrome浏览器: https://www.google.com/chrome/")
+    elif versions['browser_type'] == 'Microsoft Edge Web':
+        print("  • Edge驱动: https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/")
+        print("  • Edge浏览器: https://www.microsoft.com/edge")
+    print('\n具体操作步骤见用户须知')
+
+    return versions
+
+def run_main():
     try:
         with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as fil:
             account_info = json.load(fil)
-        try:
-            main(account_info['browser'],account_info['driver_path'],account_info['phone_number'],account_info['password'],account_info['cour'],
-                 account_info['choice'],account_info['speed'],account_info['API'],account_info['lock_screen'])
-        except NoSuchWindowException as e:
-            print(color.red('窗口意外关闭'),flush=True)
-        except SessionNotCreatedException as e:
-            error_msg = traceback.format_exc()
-            send_error(
-                "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n" + error_msg)
-            print(color.red('无法正常运行驱动，请检查地址是否正确，或根据用户须知检查版本是否与浏览器一致，如果不一致，'
-                            '请根据用户须知的指导前往下载相应版本的驱动，如果一致，请更换另外一个浏览器，但也要注意浏览器与驱动的版本是否一致，'
-                            '如果还是不行，请重新下载脚本或关机重启或查看报错日志'),flush=True)
-        except WebDriverException as e:
-            if 'ERR_INTERNET_DISCONNECTED' in str(e) or 'ERR_NAME_NOT_RESOLVED' in str(e):
-                print(color.red('你网都没连，刷个屁的课啊'),flush=True)
-            else:
-                print(color.red('出错了，具体原因请前往错误日志查看'),flush=True)
-                error_msg = traceback.format_exc()
-                send_error("\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n"+error_msg)
-        except Exception as e:
+        main(account_info['browser'], account_info['driver_path'], account_info['phone_number'], account_info['password'],account_info['choice'],
+            account_info['cour'],account_info['API'],account_info['lock_screen'],account_info['speed'],account_info['task_type'],account_info['homework'])
+    except NoSuchWindowException as e:
+        print(color.red('❌ 窗口意外关闭'),flush=True)
+    except SessionNotCreatedException as e:
+        error_msg = traceback.format_exc()
+        send_error(
+            "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n" + error_msg)
+        # 执行分析
+        result = parse_versions_from_text(error_msg)
+
+    except WebDriverException as e:
+        if 'ERR_INTERNET_DISCONNECTED' in str(e) or 'ERR_NAME_NOT_RESOLVED' in str(e):
+            print(color.red('❌ 你网都没连，刷个屁的课啊'),flush=True)
+        else:
+            print(color.red('❌ 出错了，具体原因请前往错误日志查看'),flush=True)
             error_msg = traceback.format_exc()
             send_error("\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n"+error_msg)
-            print(color.red('出错了，具体原因请前往错误日志查看'),flush=True)
-    except FileNotFoundError:
-        print(color.red('未填写信息或未保存，请前往设置页面重新设置'),flush=True)
+    except PermissionError:
+        print(color.red('请关闭该窗口后，再右键点击刷课程序用管理员权限打开'))
+    except Exception as e:
+        error_msg = traceback.format_exc()
+        send_error("\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n"+error_msg)
+        print(color.red('❌ 出错了，具体原因请前往错误日志查看'),flush=True)
+
+if __name__ == '__main__':
+    run_main()
