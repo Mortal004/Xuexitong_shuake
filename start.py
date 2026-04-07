@@ -888,8 +888,8 @@ class Start:
             if content not in data:
                 data.append(content)
                 with open(r'task/tool/course_name.json', 'w' , encoding='utf-8')as f:
-                    account_course_dict= {self.phone_number_entry.get():data}
-                    json.dump(account_course_dict, f)
+                    dit[self.phone_number_entry.get()]=data
+                    json.dump(dit, f)
 
     def save(self):
         try:

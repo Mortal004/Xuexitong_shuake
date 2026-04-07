@@ -180,8 +180,8 @@ def save_course_lst(driver,class_name,course_elements,phone_number):
                 new_list = dit.get(phone_number,[]) + course_list
                 # 去重
                 new_list = list(set(new_list))
-                account_course_dict= {phone_number: new_list}
-                json.dump(account_course_dict, f)
+                dit[phone_number]= new_list
+                json.dump(dit, f)
             print(color.green(f'保存课程列表成功,共有{len(new_list)}个课程'), flush=True)
         except:
             print(color.red('保存课程列表失败'), flush=True)
