@@ -36,7 +36,17 @@ def generate_combinations_list(input_list):
     else:
         return [input_list]
 
-def video_question(driver):
+def check_internet(driver):
+    try:
+        internet_choice=driver.find_element(By.CSS_SELECTOR,"[class='ans-vjserrdisplay-opts']")
+        # print(color.red('网络异常'), flush=True)
+        choice_list=internet_choice.find_elements(By.CSS_SELECTOR,"[name='ans-vjserrdisplay-opt']")
+        for choice in choice_list:
+            choice.click()
+    except:
+        pass
+
+def check_video_question(driver):
     try:
         element=driver.find_element(By.CLASS_NAME,'tkTopic')
         print(color.yellow('已检测到视频中有题目'), flush=True)
@@ -93,6 +103,9 @@ def check_face(driver):
 
 def check_vido_play(driver,last_time,current_time):
     global b,pause_start_time
+    with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as f:
+        account_info = json.load(f)
+        speed = account_info['speed']
     if last_time == current_time and current_time != '':
         pause_duration = time.time() - pause_start_time
         b += 1
@@ -101,49 +114,93 @@ def check_vido_play(driver,last_time,current_time):
                 print(color.red(f'当前视频播放被暂停,点击继续播放'), flush=True)
                 driver.find_element(By.CSS_SELECTOR,
                                     '[class="vjs-play-control vjs-control vjs-button vjs-paused"]').click()
-            except:
-                print(color.red(f'点击失败'), flush=True)
+            except :
+                print(color.red(f'❌ 点击失败'), flush=True)
             pause_start_time = time.time()  # 记录第一次检测到暂停的时间
-        elif b == 3:
-            # 当暂停时间间隔小于2秒时，执行原elif的代码
+        elif b == 3 and int(speed)>=2:
+        # 当暂停时间间隔小于2秒时，执行原elif的代码
             try:
-                with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as f:
-                    account_info = json.load(f)
-                    speed=account_info['speed']
-                    try:
-                        if int(speed)>2:
-                            print(color.red(f'当前视频已被设置不能调节高倍数，现在将倍数调至2倍'), flush=True)
-                            new_speed=2
-                            account_info['speed'] = '2'
-                        else:
-                            new_speed=1
-                            print(color.red(f'当前视频已被设置不能调节高倍数，现在将倍数调至1倍'), flush=True)
-                            account_info['speed'] = '1'
-                        for j in range(int(int(speed) - new_speed) * 10):
-                            pyautogui.press('a')
-                            action = ActionChains(driver)
-                            action.send_keys('a').perform()
-                            time.sleep(0.1)
-                        print(color.green('调节成功'), flush=True)
-                        try:
-                            driver.find_element(By.CSS_SELECTOR,
-                                                '[class="vjs-play-control vjs-control vjs-button vjs-paused"]').click()
-                        except:
-                            print(color.yellow(f'点击播放失败'), flush=True)
-                    except:
-                        pass
-                    with open(r'task/tool/account_info.json', 'w', encoding='utf-8') as fil:
-                        json.dump(account_info, fil)
+                if int(speed)>2:
+                    print(color.red(f'当前视频已被设置不能调节高倍数，现在将倍数调至2倍'), flush=True)
+                    new_speed=2
+                    account_info['speed'] = '2'
+                else:
+                    new_speed=1
+                    print(color.red(f'当前视频已被设置不能调节高倍数，现在将倍数调至1倍'), flush=True)
+                    account_info['speed'] = '1'
+                for j in range(int(int(speed) - new_speed) * 10):
+                    pyautogui.press('a')
+                    action = ActionChains(driver)
+                    action.send_keys('a').perform()
+                    time.sleep(0.1)
+                print(color.green('调节成功'), flush=True)
+                try:
+                    driver.find_element(By.CSS_SELECTOR,
+                                        '[class="vjs-play-control vjs-control vjs-button vjs-paused"]').click()
+                except:
+                    print(color.yellow(f'点击播放失败'), flush=True)
             except:
                 pass
+            with open(r'task/tool/account_info.json', 'w', encoding='utf-8') as fil:
+                json.dump(account_info, fil)
+
     else:
         pause_start_time = 0  # 视频正常播放，重置暂停时间记录
         b=0
 
+def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen):
+    last_time = 0
+    h = 0
+    # 判断是否完成任务
+    while True:
+        time.sleep(1)
+        driver.switch_to.default_content()
+        driver.switch_to.frame('iframe')
+        elements2 = driver.find_elements(By.CLASS_NAME, 'ans-job-icon-clear ')
+        element2 = elements2[i]
+        # 定位到该元素的上一级（父元素）
+        parent_element2 = element2.find_element(By.XPATH, "..")
+        # 获取 parent_element2 的class值
+        parent_element2_class = parent_element2.get_attribute("class")
+        txt = element2.get_attribute('aria-label')
+        # print(parent_element2_class, flush=True)
+        if txt == '任务点已完成' or 'ans-attach-ct ans-job-finished' in parent_element2_class:
+            # pyautogui.scroll(-250)
+            print(color.green(f'已完成第{i + 1}个视频'), flush=True)
+            time_end = time.time()
+            print(color.green('总共耗费了%.2f秒.' % (time_end - time_start)), flush=True)
+            break
+        else:
+            driver.switch_to.default_content()
+            driver.switch_to.frame('iframe')
+            driver.switch_to.frame(vido_iframe)
+            check_internet(driver)
+            check_video_question(driver)
+            element = driver.find_element(By.CLASS_NAME, 'vjs-current-time-display')
+            current_time = element.text
+            check_vido_play(driver, last_time, current_time)
+            last_time = current_time
+            if current_time == total_time:
+                if h == 0:
+                    h += 1
+                    try:
+                        print(color.yellow('视频已播放完毕，但任务点仍未完成，开始重播'), flush=True)
+                        driver.find_element(By.CSS_SELECTOR,
+                                            '[class="vjs-play-control vjs-control vjs-button vjs-paused vjs-ended"]').click()
+                    except:
+                        print(color.red(f'点击失败'), flush=True)
+                else:
+                    print(color.green(f'已完成第{i + 1}个视频'), flush=True)
+                    time_end = time.time()
+                    print(color.green('总共耗费了%.2f秒.' % (time_end - time_start)), flush=True)
+                    break
+            if lock_screen:
+                pyautogui.move(20, 0, )
+                pyautogui.move(-20, 0)
+
 def study_page(driver,course_name,lock_screen):
     cond=False
     driver.switch_to.default_content()
-
     driver.switch_to.frame('iframe')
     try:
         # 判断是否完成任务
@@ -201,55 +258,19 @@ def study_page(driver,course_name,lock_screen):
                 total_time='1'
             else:
                 print(color.green(f'该视频总时长为：{total_time}'),flush=True)
-            print(color.yellow('请不要将窗口最小化，这有可能导致脚本异常'),flush=True)
+            print(color.yellow('请不要将窗口最小化，这有可能导致脚本异常\n视频播放完毕会自动跳转\n正在观看视频中……'),flush=True)
             driver.switch_to.default_content()
             driver.switch_to.frame('iframe')
-            last_time=0
-            h=0
-            b=0
+            b = 0
             pause_start_time = 0  # 添加变量记录暂停开始时间
-            # 判断是否完成任务
-            while True:
-                driver.switch_to.default_content()
-                driver.switch_to.frame('iframe')
-                elements2= driver.find_elements(By.CLASS_NAME, 'ans-job-icon-clear ')
-                element2=elements2[i]
-                # 定位到该元素的上一级（父元素）
-                parent_element2 = element2.find_element(By.XPATH, "..")
-                # 获取 parent_element2 的class值
-                parent_element2_class = parent_element2.get_attribute("class")
-                txt = element2.get_attribute('aria-label')
-                if txt=='任务点已完成' or 'ans-attach-ct ans-job-finished' in parent_element2_class or h!=0:
-                    # pyautogui.scroll(-250)
-                    print(color.green(f'已完成第{i + 1}个视频'),flush=True)
-                    time_end=time.time()
-                    print(color.green('总共耗费了%.2f秒.' % (time_end - time_start)),flush=True)
-                    cond=True
-                    break
-                else:
-                    driver.switch_to.default_content()
-                    driver.switch_to.frame('iframe')
-                    driver.switch_to.frame(vido_iframe)
-                    video_question(driver)
-                    element=driver.find_element(By.CLASS_NAME,'vjs-current-time-display')
-                    current_time=element.text
-                    check_vido_play(driver,last_time,current_time)
-                    last_time = current_time
-                    if current_time==total_time and h==0:
-                        h+=1
-                        try:
-                            print(color.yellow('视频已播放完毕，但任务点仍未完成，开始重播'),flush=True)
-                            driver.find_element(By.CSS_SELECTOR,'[class="vjs-play-control vjs-control vjs-button vjs-paused vjs-ended"]').click()
-                        except:
-                            print(color.red(f'点击失败'), flush=True)
-                    if lock_screen:
-                        pyautogui.move(20, 0, )
-                        pyautogui.move(-20,0)
+            check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen)
+            cond=  True
         driver.switch_to.default_content()
         driver.switch_to.frame('iframe')
     print(color.green('所有视频均已完成'),flush=True)
     if cond and judge_active(driver):
         save_vido(driver,course_name)
+        print(color.green('已保存视频观看记录'),flush=True)
     return
 
 def save_vido(driver,course_name):
@@ -276,3 +297,4 @@ def judge_active(driver):
         return True
     else:
         return False
+

@@ -1,1 +1,1 @@
-{"API": "", "driver_path": "", "speed": "", "phone_number": "", "password": "", "browser": "", "cour": "", "choice": "", "font_type": "\u5b8b\u4f53", "font_size": "13", "lock_screen": 0,"user_notice": "True"}
+{"browser": "\u4e0d\u6307\u5b9a\u6d4f\u89c8\u5668", "driver_path": "", "phone_number": "", "password": "", "cour": "", "choice": "", "speed": "", "font_type": "Helvetica", "font_size": "13", "lock_screen": 0, "API": "", "user_notice": "True", "homework": "", "task_type": "", "file_name": ["python", "main.py"], "radio_var": 1}

@@ -2,7 +2,9 @@
 # All rights reserved.
 # This software is provided for non-commercial use only.
 # For more information, see the LICENSE file in the root directory of this project.
-
+#激活环境start_venv\Scripts\activate
+#打包python -m PyInstaller --onefile --noconsole start.py
+#python -m PyInstaller --onefile --noconsole --icon=xuexitong.ico start.py
 import json
 import random
 import signal
@@ -17,9 +19,8 @@ from colorama import Fore
 from tkinter import ttk, messagebox, filedialog
 import requests
 import os
-
 import customtkinter as ctk
-
+import pickle
 
 class Start:
     def __init__(self):
@@ -46,7 +47,9 @@ class Start:
         self.root = ctk.CTk()
         ctk.set_appearance_mode("light")
         self.root.geometry("+1290+20")  # 设置窗口大小
-        self.root.title('学习通刷课')
+        with open(r'task/tool/version_info','r',encoding='utf-8') as f:
+            version_info=f.read()
+            self.root.title(f'学习通刷课  {version_info}')
         # 初始设定窗口置顶
         self.is_topmost = True
         self.root.wm_attributes("-topmost", self.is_topmost)
@@ -55,6 +58,7 @@ class Start:
         self.help_frame =  ctk.CTkFrame(self.root,fg_color=self.frame_fg_color,corner_radius=0)
         self.vido_frame =  ctk.CTkFrame(self.root,fg_color=self.frame_fg_color,corner_radius=0)
         self.score_frame = ctk.CTkFrame(self.root,fg_color=self.frame_fg_color,corner_radius=0)
+        self.question_bank_frame=ctk.CTkFrame(self.root,fg_color=self.frame_fg_color,corner_radius=0)
         self.error_frame=  ctk.CTkFrame(self.root,fg_color=self.frame_fg_color,corner_radius=0)
         self.money_frame =  ctk.CTkFrame(self.root,fg_color=self.frame_fg_color,corner_radius=0)
         self.root.resizable(False, False)  # 禁止用户调整窗口大小
@@ -67,8 +71,8 @@ class Start:
         self.fold_image = ctk.CTkImage(light_image=Image.open(r"task\img\fold.png"), size=(15, 30))
         self.open_image = ctk.CTkImage(light_image=Image.open(r"task\img\open.png"), size=(15, 30))
         self.show_image = ctk.CTkImage(light_image=Image.open(r"task\img\show.png"), size=(15, 10))
-        self.image_name_list = ['home_dark.png','set.png','help.png','vido.png','score.png','error.png','give_money.png']
-        self.image_list = ['home_image','set_image','help_image','vido_image','score_image','error_image','money_image']
+        self.image_name_list = ['home_dark.png','set.png','help.png','vido.png','score.png','find.png','error.png','give_money.png']
+        self.image_list = ['home_image','set_image','help_image','vido_image','score_image','question_bank_image','error_image','money_image']
         for i in range(len(self.image_name_list)):
             self.image_list[i] = ctk.CTkImage(light_image=Image.open(r"task\img\{}".format(self.image_name_list[i])), size=(20, 20))
 
@@ -96,10 +100,10 @@ class Start:
                                          fg_color="transparent", text_color=("gray10", "gray90"),
                                          hover_color=self.button_color,
                                          anchor="e", command=self.fold_frame)
-        self.fold_button.grid(row=8, column=0, sticky="ew")
-        self.button_text_list = ["主页","设置","帮助","刷课日志","测试成绩","报错日志","赞助作者"]
-        self.button_command_list = [self.show_main,self.show_set,self.show_help,self.show_vido,self.show_score,self.show_error,self.show_money]
-        self.button_name_list = ['home_button','set_button','help_button','vido_button','score_button','error_button','money_button',self.open_button,self.fold_button]
+        self.fold_button.grid(row=9, column=0, sticky="new")
+        self.button_text_list = ["主页","设置","帮助","刷课日志","测试成绩","题库查询","报错日志","赞助作者"]
+        self.button_command_list = [self.show_main, self.show_set, self.show_help, lambda:self.show_record('刷课'), lambda:self.show_record('成绩'), self.show_question_bank, self.show_error, self.show_money]
+        self.button_name_list = ['home_button','set_button','help_button','vido_button','score_button','question_bank_button','error_button','money_button',self.open_button,self.fold_button]
         for i in range(len(self.button_text_list)):
             self.button_name_list[i] = ctk.CTkButton(self.navigation_frame, corner_radius=0,width=10,height=40, border_spacing=10,
                                                    text=self.button_text_list[i],font=self.font,image=self.image_list[i],
@@ -119,7 +123,7 @@ class Start:
         self.label_frame=ctk.CTkFrame(self.root,fg_color=self.frame_fg_color,corner_radius=0)
         self.label_frame.grid(row=0,column=1,sticky='nsew')
         self.frame_name_list=[self.main_frame,self.set_frame,self.help_frame,self.vido_frame,
-                              self.score_frame,self.error_frame,self.money_frame,
+                              self.score_frame,self.question_bank_frame,self.error_frame,self.money_frame,
                               self.open_frame,self.navigation_frame,self.label_frame]
         #  当前时间显示
         self.time_label = ctk.CTkLabel(self.label_frame, text="", fg_color='transparent', font=self.font)
@@ -133,8 +137,7 @@ class Start:
         # ---------------- 主页 ----------------
         # 启动程序按钮
         self.start_button = ctk.CTkButton(self.main_frame, text="开始刷课",height=40, border_spacing=10,fg_color=self.button_color,
-                                          command=lambda: self.start(['python','main.py']), font=self.font,hover_color=self.button_hover_color)
-        # self.button1.config(image=self.img)
+                                          command=self.start, font=self.font,hover_color=self.button_hover_color)
         self.start_button.grid(row=0, column=0,padx=5, pady=10)
         # 关闭程序按钮
         self.close_button = ctk.CTkButton(self.main_frame, text="结束刷课",height=40, border_spacing=10,fg_color=self.button_color,
@@ -169,49 +172,66 @@ class Start:
         self.progress_bar = ctk.CTkProgressBar(self.main_frame, width=250, height=20)
         # ---------------- 刷课记录 ----------------
         # 下拉选项框（包含可输入部分）
-        self.course_vido_entry = ctk.CTkComboBox(self.vido_frame,dropdown_font=self.font,values=[],
+        self.course_vido_entry = ctk.CTkComboBox(self.vido_frame, dropdown_font=self.font, values=[],
                                                  dropdown_fg_color=self.frame_fg_color,
                                                  button_color=self.button_color,
                                                  button_hover_color=self.button_hover_color,
                                                  dropdown_hover_color=self.button_color,
-                                                 font=self.font,command=self.show_vido)
-        self.course_vido_entry['state'] = 'normal'
+                                                 font=self.font, command=lambda value:self.show_record('刷课'))
+        # self.course_vido_entry['state'] = 'normal'
         self.course_name = self.course_vido_entry.get()
         self.course_vido_entry.grid(row=0, column=0, padx=10, pady=5, sticky=tk.W + tk.E)  # 使用 sticky 参数使组件填满整个单元格
         # 按钮
-        self.button1 = ctk.CTkButton(self.vido_frame, text="查询", command=self.show_vido,fg_color=self.button_color,
-                                     font=self.font,hover_color=self.button_hover_color)
-        self.button1.grid(row=0, column=1, padx=10, pady=5, sticky=tk.W)  # 使用 sticky 参数使组件填满整个单元格
+        self.find_button1 = ctk.CTkButton(self.vido_frame, text="查询", command=lambda:self.show_record('刷课'), fg_color=self.button_color,
+                                          font=self.font, hover_color=self.button_hover_color)
+        self.find_button1.grid(row=0, column=1, padx=1, pady=5, sticky=tk.W)  # 使用 sticky 参数使组件填满整个单元格
+        self.delete_button1 = ctk.CTkButton(self.vido_frame, text="删除记录",
+                                            command=lambda: self.delete_record('刷课'), fg_color=self.button_color,
+                                            font=self.font, hover_color=self.button_hover_color)
+        self.delete_button1.grid(row=0, column=2, padx=1, pady=5)
         # 配置按钮框架的列权重，使按钮居中
         self.score_frame.rowconfigure(0, weight=1)
         # self.score_frame.columnconfigure(1, weight=1)
         #创建只读文本框
         self.vido_text = ctk.CTkTextbox(self.vido_frame, height=527, width=435,font=self.font,fg_color='transparent')
         self.vido_text.configure(state=tk.DISABLED)
-        self.vido_text.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.vido_text.grid(row=1, column=0, columnspan=3, padx=10, pady=5, sticky=tk.W+tk.E+tk.N+tk.S)
 
         # ---------------- 成绩日志 ----------------
         # 下拉选项框（包含可输入部分）
-        self.course_score_entry = ctk.CTkComboBox(self.score_frame,dropdown_font=self.font,font=self.font,values=[],
+        self.course_score_entry = ctk.CTkComboBox(self.score_frame, dropdown_font=self.font, font=self.font, values=[],
                                                   dropdown_fg_color=self.frame_fg_color,
                                                   button_color=self.button_color,
                                                   button_hover_color=self.button_hover_color,
                                                   dropdown_hover_color=self.button_color,
-                                                  command=self.show_score)
+                                                  command=lambda value:self.show_record('成绩'))
+
         # self.course_score_entry['state'] = 'normal'
         self.course_name=self.course_score_entry.get()
         self.course_score_entry.grid(row=0, column=0, padx=10, pady=5, sticky=tk.W+tk.E)  # 使用 sticky 参数使组件填满整个单元格
         # 按钮
-        self.button2 = ctk.CTkButton(self.score_frame, text="查询", command=self.show_score,fg_color=self.button_color,
-                                     font=self.font,hover_color=self.button_hover_color)
-        self.button2.grid(row=0, column=1, padx=10, pady=5, sticky=tk.W)  # 使用 sticky 参数使组件填满整个单元格
+        self.find_button2 = ctk.CTkButton(self.score_frame, text="查询", command=lambda:self.show_record('成绩'), fg_color=self.button_color,
+                                          font=self.font, hover_color=self.button_hover_color)
+        self.find_button2.grid(row=0, column=1, padx=1, pady=5)  # 使用 sticky 参数使组件填满整个单元格
+        self.delete_button2=ctk.CTkButton(self.score_frame, text="删除记录", command=lambda: self.delete_record('成绩'), fg_color=self.button_color,
+                                          font=self.font, hover_color=self.button_hover_color)
+        self.delete_button2.grid(row=0, column=2, padx=1, pady=5)
         # 配置按钮框架的列权重，使按钮居中
         self.score_frame.rowconfigure(0, weight=1)
         # self.score_frame.columnconfigure(1, weight=1)
         # 创建只读文本框
         self.score_txt = ctk.CTkTextbox(self.score_frame,height=527,width=435,font=self.font,fg_color='transparent')
         self.score_txt.configure(state=tk.DISABLED)
-        self.score_txt.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky=tk.W+tk.E+tk.N+tk.S)  # 使用 sticky 参数使组件填满整个单元格
+        self.score_txt.grid(row=1, column=0, columnspan=3, padx=10, pady=5, sticky=tk.W+tk.E+tk.N+tk.S)  # 使用 sticky 参数使组件填满整个单元格
+        self.dit={'刷课':[self.course_vido_entry,'刷课日志',self.vido_text,self.vido_frame],'成绩':[self.course_score_entry,'测试成绩',self.score_txt,self.score_frame]}
+
+        # ---------------- 题库查询 ----------------
+        self.tiku_text = ctk.CTkTextbox(self.question_bank_frame, height=600, width=437,font=self.font,fg_color='transparent')
+        self.tiku_text.configure(state=tk.DISABLED)
+        self.tiku_text.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky=tk.W+tk.E+tk.N+tk.S)
+        self.delete_tiku_button=ctk.CTkButton(self.question_bank_frame, text="删除所有缓存题目", command=self.delete_huancun, fg_color=self.button_color,
+                                          font=self.font, hover_color=self.button_hover_color)
+        self.delete_tiku_button.grid(row=2, column=0, padx=1, pady=5,columnspan=2,sticky=tk.W+tk.E)
 
         # ---------------- 设置 ----------------
         self.style=ttk.Style()
@@ -224,18 +244,18 @@ class Start:
         #browser
         self.browser_label = ttk.Label(self.configuration_set_frame, text="浏览器:", font=self.font)
         self.browser_label.grid(row=0, column=1, padx=5, pady=10, sticky=tk.W)
-        self.browser_options = ["chrome", "edge"]
+        self.browser_options = ['不指定浏览器','edge','chrome']
         self.browser_entry = ctk.CTkComboBox(self.configuration_set_frame,state = 'readonly',
                                              button_color=self.button_color, button_hover_color=self.button_hover_color,
-                                             dropdown_fg_color=self.frame_fg_color,
+                                             dropdown_fg_color=self.frame_fg_color, command=self.auto_fill_browser_driver,
                                              dropdown_hover_color=self.button_color,
                                              values=self.browser_options, font=self.font)
         self.browser_entry.grid(row=0, column=2, padx=5, pady=10, sticky=tk.W)
-        # Chrome driver
-        self.chrome_driver_label = ttk.Label(self.configuration_set_frame, text="驱动地址:",font=self.font)
-        self.chrome_driver_label.grid(row=1, column=1, padx=5, pady=10, sticky=tk.W)
-        self.chrome_driver_entry = ctk.CTkEntry(self.configuration_set_frame)
-        self.chrome_driver_entry.grid(row=1, column=2, padx=5, pady=10, sticky=tk.W)
+        # browser driver
+        self.browser_driver_label = ttk.Label(self.configuration_set_frame, text="驱动地址:",font=self.font)
+        self.browser_driver_label.grid(row=1, column=1, padx=5, pady=10, sticky=tk.W)
+        self.browser_driver_entry = ctk.CTkEntry(self.configuration_set_frame)
+        self.browser_driver_entry.grid(row=1, column=2, padx=5, pady=10, sticky=tk.W)
         self.open_file_button = ctk.CTkButton(self.configuration_set_frame, text="选择文件",
                                               fg_color=self.button_color, command=self.select_file,
                                               hover_color=self.button_hover_color)
@@ -339,8 +359,18 @@ class Start:
         self.lock_screen_label = ttk.Label(self.function_set_frame, text="防锁屏：", font=self.font)
         self.lock_screen_check = ctk.CTkSwitch(self.function_set_frame, text="", bg_color=self.frame_fg_color,
                                             font=self.font)
-        self.combobox_lst=[ self.change_theme,self.speed_entry,self.question_entry,self.cour_entry,self.size_entry,
+        # 选择作业
+        self.homework_label = ttk.Label(self.function_set_frame, text="选择作业:", font=self.font)
+        self.homework_entry = ctk.CTkComboBox(self.function_set_frame, font=self.font, values=['手动选择', '自动选择'],
+                                              button_color=self.button_color,
+                                              button_hover_color=self.button_hover_color,
+                                              dropdown_fg_color=self.frame_fg_color, command=self.prompt,
+                                              dropdown_hover_color=self.button_color,
+                                              )
+        self.homework_entry.configure(state = 'readonly')
+        self.combobox_lst=[ self.change_theme,self.speed_entry,self.question_entry,self.cour_entry,self.size_entry,self.homework_entry,
                             self.font_entry, self.browser_entry,self.course_score_entry,self.course_vido_entry]
+
         # 创建保存按钮
         self.save_button = ctk.CTkButton(self.set_frame, text="保存", command=self.save,
                                          font=self.font,fg_color=self.button_color,
@@ -349,8 +379,8 @@ class Start:
         #设置网格权重
         self.set_frame.rowconfigure(3,weight=1)
         self.frame_set_frame.rowconfigure(3,weight=1)
-        self.button_name_list1=[self.start_button,self.close_button,self.update_button,self.save_button,
-                                self.open_file_button,self.button1,self.button2]
+        self.button_name_list1=[self.start_button, self.close_button, self.update_button, self.save_button,
+                                self.open_file_button, self.find_button1, self.find_button2,self.delete_button1,self.delete_button2]
 
         #----------------帮助页面----------------
         with open(r'task\tool\Help.txt', 'r', encoding='utf-8') as f:
@@ -368,7 +398,7 @@ class Start:
 
         #----------------赞助页面----------------
         self.label1 = ctk.CTkLabel(self.money_frame, text="如果对您有帮助，欢迎给我打赏,各位的支持就是我更新的最大动力\n"
-                                                          "邮箱地址：2022865286@qq.com",
+                                                          "邮箱地址：2022865286@qq.com\n(获取API的赞助完后一定要发送邮箱告知作者)",
                                    font=self.font,fg_color='transparent')
         self.label1.grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky=tk.W)
         # 加载图片
@@ -387,6 +417,56 @@ class Start:
         if self.user_notice=='True':
             # 在初始化完成后显示用户须知弹窗
             self.show_user_notice()
+
+    def delete_record(self, file_name):
+        #验证文件是否存在
+        file_path = fr'task\record\《{self.dit[file_name][0].get()}》的{file_name}记录.txt'
+        # 验证文件是否存在
+        if os.path.exists(file_path):
+            yes_no=tk.messagebox.askyesno('确认','确定要删除吗？删除后无法恢复')
+            if yes_no:
+                os.remove(file_path)
+                tk.messagebox.showinfo('提示', f'{file_name}记录文件已成功删除')
+        else:
+            tk.messagebox.showwarning('警告', f'指定的{file_name}记录文件不存在')
+        self.show_record(file_name)
+
+    def delete_huancun(self):
+        try:
+            # 检索所有pkl文件
+            folder_path = r'task/record'
+            tiku_files = [f for f in os.listdir(folder_path)
+                          if f.endswith('.pkl') and os.path.isfile(os.path.join(folder_path, f))]
+            for tiku_file in tiku_files:
+                os.remove(os.path.join(folder_path, tiku_file))
+            tk.messagebox.showinfo('提示', f'缓存记录文件已成功删除')
+
+        except:
+            tk.messagebox.showwarning('警告', f'删除失败')
+        self.show_question_bank()
+
+
+    def prompt(self,choice):
+        """提示用户"""
+        if choice=='自动选择':
+            tk.messagebox.showinfo('提示', '默认会从第一个未完成的作业开始刷，刷完后只会自动保存不会提交，保存后自动开始刷下一个作业')
+        else:
+            tk.messagebox.showinfo('提示', '到达作业页面后请手动选择您要刷的作业，刷完后只会自动保存，请确认后手动提交')
+
+    def auto_fill_browser_driver(self, choice):
+        """处理浏览器选择变化，自动填充对应的驱动路径"""
+        # 清空当前驱动路径
+        self.browser_driver_entry.configure(state='normal')
+        self.browser_driver_entry.delete(0, tk.END)
+
+        # 根据选择的浏览器自动填充对应的驱动路径
+        if choice == "edge":
+            self.browser_driver_entry.insert(0, r"edgedriver_win64\msedgedriver.exe")
+        # elif choice == "chrome":
+        #     self.browser_driver_entry.insert(0, r"chromedriver-win64\chromedriver-win64\chromedriver.exe")
+        elif choice == "不指定浏览器":
+            self.browser_driver_entry.insert(0, "无需填写")
+            self.browser_driver_entry.configure(state='disabled')
 
     def show_user_notice(self):
         """显示用户须知弹窗"""
@@ -486,9 +566,10 @@ class Start:
             self.API_entry.configure(show='*')
 
     def function_choice(self):
-        if self.radio_var.get()==1:
+        if self.radio_var.get()==1 :
             self.question_label.grid(row=4, column=1, padx=5, pady=5, sticky=tk.W)
             self.question_entry.grid(row=4, column=2, padx=5, pady=5, sticky=tk.W)
+            self.question_entry.configure(values=['DeepSeek AI','不刷题'])
             if self.question_entry.get()=='DeepSeek AI':
                 self.API_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
                 self.API_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
@@ -497,6 +578,26 @@ class Start:
             self.speed_entry.grid(row=7, column=2, padx=5, pady=5, sticky=tk.W)
             self.lock_screen_label.grid(row=8, column=1, padx=5, pady=5, sticky=tk.W)
             self.lock_screen_check.grid(row=8, column=2, sticky=tk.W)
+            self.homework_label.grid_forget()
+            self.homework_entry.grid_forget()
+
+        elif self.radio_var.get()==2:
+            if self.user_notice == 'True':
+                self.homework_entry.set('')
+                tk.messagebox.showinfo('提示', '该功能刚刚开发完成...,难免出错，谢谢理解')
+            self.question_label.grid(row=4, column=1, padx=5, pady=5, sticky=tk.W)
+            self.question_entry.grid(row=4, column=2, padx=5, pady=5, sticky=tk.W)
+            self.question_entry.set('DeepSeek AI')
+            self.question_entry.configure(values=['DeepSeek AI'])
+            self.API_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
+            self.API_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
+            self.show_api_button.grid(row=5, column=3, pady=5, sticky=tk.W)
+            self.homework_label.grid(row=7, column=1, padx=5, pady=5, sticky=tk.W)
+            self.homework_entry.grid(row=7, column=2, padx=5, pady=5, sticky=tk.W)
+            self.speed_label.grid_forget()
+            self.speed_entry.grid_forget()
+            self.lock_screen_label.grid_forget()
+            self.lock_screen_check.grid_forget()
         else:
             tk.messagebox.showinfo('提示', '该功能还在开发中...,敬请期待')
             self.radio_var.set(1)
@@ -507,7 +608,6 @@ class Start:
             self.API_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
             self.API_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
             self.show_api_button.grid(row=5, column=3,  pady=5, sticky=tk.W)
-            tk.messagebox.showinfo('提示', '请输入Deepseek API\n如果您自己并未购买API，请前往赞助作者页面对作者进行赞赏，并发送作者邮件获取API')
         else:
             self.API_label.grid_forget()
             self.API_entry.grid_forget()
@@ -556,7 +656,8 @@ class Start:
                     else:
                         self.text_box.insert(tk.END, '是否为最新版本请以作者的通知为准，如需更新可直接前往网盘下载\n'
                                                      '夸克网盘：https://pan.quark.cn/s/eba634db1544\n'
-                                                     '或迅雷网盘链接:https://pan.xunlei.com/s/VO_FdZ-t7lDMpGFgLcuH81DTA1?pwd=viah#')
+                                                     '或迅雷网盘链接:https://pan.xunlei.com/s/VO_FdZ-t7lDMpGFgLcuH81DTA1?pwd=viah#\n'
+                                             '或百度网盘链接: https://pan.baidu.com/s/1xEoGATUZPk6u3rQYvWnrlQ?pwd=1234 提取码: 1234')
         except Exception as e:
             self.text_box.insert(tk.END, '连接失败，请检查网络连接\n')
             self.text_box.insert(tk.END, f'错误信息：{e}\n')
@@ -571,7 +672,7 @@ class Start:
             self.root.wm_attributes("-topmost", False)
 
     def show_frame(self, frame):
-        for f in self.frame_name_list[:7]:
+        for f in self.frame_name_list[:8]:
             if f != frame:
                 f.grid_forget()
             else:
@@ -581,33 +682,43 @@ class Start:
         self.select_frame_by_name('主页')
         self.show_frame(self.main_frame)
 
-    def show_vido(self,*key):
-        self.select_frame_by_name('刷课日志')
-        self.vido_text.configure(state=tk.NORMAL)
+    def show_record(self, name):
+        self.select_frame_by_name(self.dit[name][1])
+        self.dit[name][2].configure(state=tk.NORMAL)
+        self.dit[name][2].delete('1.0', tk.END)
         try:
-            with open(fr'task\record\《{self.course_vido_entry.get()}》的刷课记录.txt', 'r', encoding='utf-8') as f:
+            with open(fr'task\record\《{self.dit[name][0].get()}》的{name}记录.txt', 'r', encoding='utf-8') as f:
                 content = f.read()
-                self.vido_text.delete('1.0', tk.END)
-                self.vido_text.insert(tk.END, content)
+                self.dit[name][2].insert(tk.END, content)
         except FileNotFoundError:
-            self.vido_text.delete('1.0', tk.END)
-            self.vido_text.insert(tk.END, f'暂未查询到《{self.course_vido_entry.get()}》的刷课记录')
-        self.show_frame(self.vido_frame)
-        self.vido_text.configure(state=tk.DISABLED)
+            self.dit[name][2].insert(tk.END, f'暂未查询到《{self.dit[name][0].get()}》的{name}记录')
+        self.show_frame(self.dit[name][3])
+        self.dit[name][2].configure(state=tk.DISABLED)
 
-    def show_score(self,*key):
-        self.select_frame_by_name('测试成绩')
-        self.score_txt.configure(state=tk.NORMAL)
+    def show_question_bank(self,*key):
+        self.select_frame_by_name('题库查询')
+        self.tiku_text.configure(state=tk.NORMAL)
+        self.tiku_text.delete('1.0', tk.END)
         try:
-            with open(fr'task\record\《{self.course_score_entry.get()}》的成绩记录.txt', 'r', encoding='utf-8') as f:
-                content = f.read()
-                self.score_txt.delete('1.0', tk.END)
-                self.score_txt.insert(tk.END, content)
+            # 检索所有pkl文件
+            folder_path = r'task/record'
+            tiku_files = [f for f in os.listdir(folder_path)
+                          if f.endswith('.pkl') and os.path.isfile(os.path.join(folder_path, f))]
+            tiku_txt = ''
+            for tiku_file in tiku_files:
+                if 'ques1' not in tiku_file:
+                    continue
+                tiku_file_path = os.path.join(folder_path, tiku_file)
+                tiku_txt += "问题:  " + pickle.load(open(tiku_file_path, 'rb'))['value']['question'] + '\n'
+                tiku_txt += str(pickle.load(open(tiku_file_path, 'rb'))['value']['options']) + '\n'
+                tiku_txt += '答案为：' + str(pickle.load(open(tiku_file_path, 'rb'))['value']['answer']) + '\n\n'
+            if tiku_txt == '':
+                self.tiku_text.insert( tk.END,'暂无缓存的题目')
+            self.tiku_text.insert(tk.END, tiku_txt)
         except FileNotFoundError:
-            self.score_txt.delete('1.0', tk.END)
-            self.score_txt.insert(tk.END, f'暂未查询到《{self.course_score_entry.get()}》的成绩记录')
-        self.show_frame(self.score_frame)
-        self.score_txt.configure(state=tk.DISABLED)
+            self.tiku_text.insert(tk.END,'暂无缓存的题目')
+        self.show_frame(self.question_bank_frame)
+        self.tiku_text.configure(state=tk.DISABLED)
 
     def show_error(self):
         self.select_frame_by_name('报错日志')
@@ -638,8 +749,8 @@ class Start:
     def select_file(self):
         file_path = filedialog.askopenfilename(title="选择文件", filetypes=[("", "*.exe")])
         if file_path:
-            self.chrome_driver_entry.delete(0, tk.END)
-            self.chrome_driver_entry.insert(tk.END,file_path)
+            self.browser_driver_entry.delete(0, tk.END)
+            self.browser_driver_entry.insert(tk.END,file_path)
 
     def start_button_normal(self):
         time.sleep(5)
@@ -717,7 +828,14 @@ class Start:
         self.thread = threading.Thread(target=read_output)
         self.thread.start()
 
-    def start(self,file_name):
+    def start(self):
+        with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as fil:
+            self.account_info = json.load(fil)
+            if self.account_info['phone_number'] == '':
+                tk.messagebox.showerror('警告', message='请在设置页面填写相关信息再保存，如果已经保存，请在关闭主窗口后，'
+                                                        '再右键点击刷课程序用管理员权限运行,进入设置页面填写相关信息')
+                return
+            file_name = self.account_info['file_name']
         threading.Thread(target=self.run_program,args=(file_name,)).start()
         threading.Thread(target=self.start_button_normal).start()
 
@@ -762,14 +880,16 @@ class Start:
         if content:
             data = []
             try:
-                with open(r'task\tool\course_name.json', 'r') as f:
-                    data = json.load(f)
+                with open(r'task/tool/course_name.json', 'r') as f:
+                    dit = json.load(f)
+                    data=dit.get(self.phone_number_entry.get(),[])
             except FileNotFoundError:
                 pass
             if content not in data:
                 data.append(content)
-                with open(r'task\tool\course_name.json', 'w' , encoding='utf-8')as f:
-                    json.dump(data, f)
+                with open(r'task/tool/course_name.json', 'w' , encoding='utf-8')as f:
+                    account_course_dict= {self.phone_number_entry.get():data}
+                    json.dump(account_course_dict, f)
 
     def save(self):
         try:
@@ -783,15 +903,17 @@ class Start:
             return False
         else:
             self.account_info['browser']=self.browser_entry.get()
-        if self.chrome_driver_entry.get()=='':
+        if self.browser_driver_entry.get()=='':
             tk.messagebox.showerror('警告', message='请填写驱动的地址')
             return False
         else:
-            self.account_info['driver_path']=self.chrome_driver_entry.get()
-        if self.browser_entry.get() not in self.chrome_driver_entry.get():
-            tk.messagebox.showerror('警告', message='请检查你的浏览器是否与驱动对应')
-            return False
-
+            self.account_info['driver_path']=self.browser_driver_entry.get()
+        if self.browser_entry.get()!='不指定浏览器':
+            if self.browser_entry.get() not in self.browser_driver_entry.get():
+                tk.messagebox.showerror('警告', message='请检查你的浏览器是否与驱动对应')
+                return False
+        else:
+            self.account_info['driver_path']=''
         if self.phone_number_entry.get()=='':
             tk.messagebox.showerror('警告', message='请填写手机号')
             return False
@@ -807,57 +929,81 @@ class Start:
             return False
         else:
             self.account_info['cour'] = self.cour_entry.get().replace('\n', '')
-        if self.question_entry.get() =='' :
+        if self.question_entry.get() ==''  :
             tk.messagebox.showerror('警告', message='请选择选择刷题设置')
             return False
         else:
             self.account_info['choice'] = self.question_entry.get()
-        if self.speed_entry.get()=='':
+
+        if self.question_entry.get() == 'DeepSeek AI' and self.API_entry.get()=='':
+            tk.messagebox.showerror('警告', message='请填写API密钥')
+            return False
+        else:
+            self.account_info['API'] = self.API_entry.get()
+        if self.speed_entry.get()==''and self.radio_var.get()==1:
             tk.messagebox.showerror('警告', message='请填写倍数')
             return False
         else:
             self.account_info['speed']=self.speed_entry.get()
+        if self.homework_entry.get() == '' and self.radio_var.get() == 2:
+            tk.messagebox.showerror('警告', message='请填写作业选择形式')
+            return False
+        else:
+            self.account_info['homework'] = self.homework_entry.get()
+        if self.radio_var.get()==1:
+            self.account_info['task_type']='章节'
+        elif self.radio_var.get()==2:
+            self.account_info['task_type']='作业'
         self.account_info['font_type'] = self.font_entry.get()
         self.account_info['font_size'] = self.size_entry.get()
         self.account_info['lock_screen'] = self.lock_screen_check.get()
-        if self.question_entry.get() == 'DeepSeek AI':
-            if self.API_entry.get()=='':
-                tk.messagebox.showerror('警告', message='请填写DeepSeek API\n如果您自己并未购买API，请前往赞助作者页面对作者进行赞赏，并发送作者邮件获取API')
-                return False
-            else:
-                self.account_info['API'] = self.API_entry.get()
+        self.account_info['radio_var']=self.radio_var.get()
+
         self.result = tk.messagebox.askokcancel('确认保存', '你确定要保存吗？\n(使用DeepSeek可支持全题型作答)')
         if self.result:
-            tk.messagebox.showinfo('', '保存成功')
             with open(r'task/tool/account_info.json', 'w', encoding='utf-8') as f:
                 json.dump(self.account_info, f)
+            with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as fil:
+                self.account_info = json.load(fil)
+                if self.account_info['phone_number']!='':
+                    tk.messagebox.showinfo('', '保存成功')
+                else:
+                    tk.messagebox.showerror('警告', message='保存失败，请在关闭主窗口后，再右键点击刷课程序用管理员权限打开')
+
             self.save_course()
             self.change_font()
             self.root.update()
 
     def load_data(self):
         try:
-            with open(r'task\tool\course_name.json', 'r') as f:
-                data = json.load(f)
-                if data:
-                    self.course_score_entry.configure(values= tuple(data))
-                    self.course_vido_entry.configure(values= tuple(data))
-                    self.cour_entry.configure(values= tuple(data))
+
             with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as fil:
                 self.account_info = json.load(fil)
+                with open(r'task/tool/course_name.json', 'r') as f:
+                    dit = json.load(f)
+                    data=dit.get(self.account_info['phone_number'],[])
+                    if data:
+                        self.course_score_entry.configure(values= tuple(data))
+                        self.course_vido_entry.configure(values= tuple(data))
+                        self.cour_entry.configure(values=tuple(data))
                 self.user_notice=self.account_info['user_notice']
                 self.course_score_entry.set( self.account_info['cour'])
                 self.course_vido_entry.set( self.account_info['cour'])
                 self.browser_entry.set( self.account_info['browser'])
-                self.chrome_driver_entry.insert(0, self.account_info['driver_path'])
+                if self.account_info['browser']!='不指定浏览器':
+                    self.browser_driver_entry.insert(0, self.account_info['driver_path'])
+                else:
+                    self.browser_driver_entry.insert(0, '无需填写')
+                    self.browser_driver_entry.configure(state=tk.DISABLED)
                 self.speed_entry.set( self.account_info['speed'])
                 self.phone_number_entry.insert( 0,self.account_info['phone_number'])
                 self.password_entry.insert(0, self.account_info['password'])
                 self.cour_entry.set( self.account_info['cour'])
                 self.question_entry.set( self.account_info['choice'])
-
+                self.homework_entry.set( self.account_info['homework'])
+                self.radio_var.set(self.account_info['radio_var'])
                 try:
-                    self.API_entry.insert( 0,self.account_info['API'])
+                    self.API_entry.insert(0, self.account_info['API'])
                     self.font_entry.set(self.account_info['font_type'])
                     self.size_entry.set(self.account_info['font_size'])
                     self.change_font()
