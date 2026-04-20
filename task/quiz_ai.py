@@ -2,9 +2,13 @@
 # All rights reserved.
 # This software is provided for non-commercial use only.
 # For more information, see the LICENSE file in the root directory of this project.
+import random
 import time
 import re
 import asyncio
+import traceback
+
+from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 from task.tool.no_secret import DecodeSecret
 from task.tool import color
@@ -12,6 +16,8 @@ import sys
 import io
 from task.ai_wen_da import main,AnswerAPI,Question
 from task.DeepSeekAsk import DeepSeekAsk
+from task.tool.send_wx import send_error
+
 # 设置默认编码为UTF-8
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
@@ -118,6 +124,7 @@ class Answer:
                     self.option_text_list.append(re.sub(r'\s+', '', self.decodeSecret.decode(option.text).strip()))
             elif self.questionType in ['简答题', '论述题', '填空题','名词解释','论述题']:
                 self.all_optionWebElementList.append(None)
+                self.option_text_list  =['']
             else:
                 print(color.red(f'第{i+1}题题型为{self.questionType},无法作答'))
                 continue
@@ -126,19 +133,28 @@ class Answer:
 
     def use_ai_wen_da(self):
         for i in self.all_title_dit.keys():
-            if self.times==0:
+            if self.times==0 and self.work_choice!='随机答题':
                 print(color.green('\n<===================  分隔线  ===================>\n'), flush=True)
-                self.answer_list = asyncio.run(
-                    main(self.questionType_list[i], self.only_title_text[i], self.num_option_dit[i], self.API_KEY))
+                try:
+                    self.answer_list = asyncio.run(
+                        main(self.questionType_list[i], self.only_title_text[i], self.num_option_dit[i], self.API_KEY))
+                except Exception as e:
+                    print(color.red(f'第{i+1}题搜索失败：{e}'), flush=True)
                 if type(self.answer_list) is str:
                     self.answer_list = eval(self.answer_list)
                 if not self.answer_list:
-                    self.answer_list = asyncio.run(
-                        main(self.questionType_list[i], self.only_title_text[i], self.num_option_dit[i], self.API_KEY))
+                    try:
+                        self.answer_list = asyncio.run(
+                            main(self.questionType_list[i], self.only_title_text[i], self.num_option_dit[i], self.API_KEY))
+                    except Exception as e:
+                        print(color.red(f'第{i+1}题搜索失败：{e}'), flush=True)
                     if type(self.answer_list) is str:
                         self.answer_list = eval(self.answer_list)
-            else:
+            elif self.work_choice!='随机答题':
                 self.answer_list=[]
+            elif self.work_choice=='随机答题':
+                self.answer_list=[random.choice(self.num_option_dit[i])]
+                print(color.red(f'本次采用随机答题,随机答案为：{self.answer_list}'),flush=True)
             if not self.answer_list:
                 self.num_answer_dit[i] = []
                 # print(color.red('无答案，跳过'), flush=True)
@@ -242,8 +258,8 @@ class Answer:
                 if  len(answer)==1:
                     answer=re.split(r' ', answer[0])
                     print(color.red(f'修正答案：{answer}'), flush=True)
-                if len(elements)!=len(answer):
-                    print(color.red('填空题答案数量与题目数量不一致'), flush=True)
+                if len(elements)>len(answer):
+                    print(color.red('填空题答案数量少于题目数量'), flush=True)
                     return False
                 for number in range(len(elements)):
                     self.driver.execute_script("arguments[0].click();", elements[number])
@@ -275,12 +291,16 @@ class Answer:
     def submit(self):
         formatted_result = "{:.2%}".format(self.ans_rate)
         print(color.red(f'本次答题率为{formatted_result}'), flush=True)
-        if self.ans_rate >= 0.9:
+        if self.ans_rate >= 0.9 or self.work_choice =='随机答题':
             # 点击提交
             print(color.yellow('5秒后提交'), flush=True)
             time.sleep(5)
-            self.driver.find_element(By.CSS_SELECTOR, '[class="btnSubmit workBtnIndex"]').click()
-            time.sleep(1)
+            try:
+                self.driver.find_element(By.CSS_SELECTOR, '[class="btnSubmit workBtnIndex"]').click()
+                time.sleep(1)
+            except NoSuchElementException:
+                print(color.red('当前测验无法提交'), flush=True)
+                return True
             # 点击确认
             self.driver.switch_to.default_content()
             self.driver.find_element(By.XPATH, '//*[@id="popok"]').click()
@@ -318,3 +338,18 @@ class Answer:
                 pass
         self.driver.switch_to.default_content()
 
+def finish_quiz(driver, course_name, API, choice):
+    driver.switch_to.default_content()
+    driver.switch_to.frame('iframe')
+    test_frames = driver.find_elements(By.XPATH,
+                                       '//iframe[@src="/ananas/modules/work/index.html?v=2025-1028-1629&castscreen=0"]')
+    print(color.magenta(f'已检测到{len(test_frames)}个测试'), flush=True)
+    for test_frame in test_frames:
+        try:
+            Answer(driver, test_frame, course_name, API, choice)
+        except:
+            error_msg = traceback.format_exc()
+            send_error(
+                "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n" + error_msg)
+            print(color.yellow('❌ 出错了，具体原因请前往错误日志查看，请自行保存或提交,15秒后继续'), flush=True)
+            time.sleep(15)

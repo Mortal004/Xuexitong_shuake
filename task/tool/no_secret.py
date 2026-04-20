@@ -49,7 +49,9 @@ class DecodeSecret:
                     continue
         if self._statusCode == 1:
             if fontFaceStr == "":
-                raise Exception("当前任务点无法获取 font_face 值")
+                # raise Exception("当前任务点无法获取 font_face 值")
+                print('英语题', flush=True)
+                return
         elif self._statusCode == 2:
             if fontFaceStr == "":
                 self._statusCode = 0

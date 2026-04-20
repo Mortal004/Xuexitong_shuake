@@ -18,82 +18,17 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium import webdriver
+from task.tool.face import check_face,get_cookie,auto_login_with_cookies
+from task.finish_dicussion import finish_discussion
+from task.play_audio import play_audio
 from task.tool import color
 from task.watch_ppt import __ppt
-from task.watch_vido import study_page,check_face
-from task.quiz_ai import Answer
+from task.watch_vido import study_page
+from task.quiz_ai import  finish_quiz
 from task.tool.send_wx import send_error
 from task.do_work import do_work
 
-def get_cookie(driver):
-    try:
-        pickle.dump(driver.get_cookies(), open(r'task/tool/cookies.pkl', 'wb'))
-        return True
-    except PermissionError:
-        print(color.red('请在关闭该窗口后，再右键点击刷课程序用管理员权限打开'))
-        return False
-    except Exception :
-        print(color.red(f'获取cookie失败'),flush=True)
-        error_msg = traceback.format_exc()
-        send_error(
-            "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n" + error_msg)
-        return True
-
-
-def auto_login_with_cookies(driver):
-    if not driver.title=='用户登录':
-        return True
-    try:
-        # 清除可能存在的旧cookie
-        driver.delete_all_cookies()
-        try:
-            cookies = pickle.load(open(r'task/tool/cookies.pkl', 'rb'))
-        except:
-            return False
-        # 逐个添加cookie
-        for cookie in cookies:
-            try:
-                # 移除可能引起问题的属性
-                cookie_to_add = cookie.copy()
-
-                # Selenium的add_cookie方法不支持'sameSite'参数，需要移除
-                if 'sameSite' in cookie_to_add:
-                    del cookie_to_add['sameSite']
-
-                # 确保domain格式正确
-                if cookie_to_add['domain'].startswith('.'):
-                    # 对于以点开头的domain，确保浏览器在当前域的正确上下文中
-                    pass
-
-                driver.add_cookie(cookie_to_add)
-                # print(color.green(f"成功添加cookie: {cookie['name']}"),flush=True)
-
-            except Exception as e:
-                pass
-                # print(color.red(f"添加cookie {cookie['name']} 时出错: {e}"),flush=True)
-
-        # 刷新页面使cookie生效
-        driver.refresh()
-
-        # 等待页面加载
-        time.sleep(3)
-        #  访问需要登录的页面测试
-        test_url = "https://i.chaoxing.com"  # 个人中心页面
-        driver.get(test_url)
-        # 验证登录是否成功
-        if driver.title!='用户登录':
-            print(color.green("自动登录验证成功！"),flush=True)
-            return True
-        else:
-            print(color.red("登录可能已过期"),flush=True)
-            return False
-
-    except Exception as e:
-        print(color.red(f"自动登录过程中出错"),flush=True)
-        error_msg = traceback.format_exc()
-        send_error(
-            "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n" + error_msg)
-        return False
+condition=True
 
 def login_study(driver,phone_number,password):
     """
@@ -164,30 +99,42 @@ def login_study(driver,phone_number,password):
         pass
 
 def save_course_lst(driver,class_name,course_elements,phone_number):
-    have_task_course_element=driver.find_element(By.ID,'stuNormalCourseListDiv')
-    new_course_elements=have_task_course_element.find_elements(By.CLASS_NAME,class_name)
-    if len(course_elements)==0:
-        new_course_elements=course_elements
-    course_list = [course_element.get_attribute('title') for course_element in new_course_elements if
-                   course_element.get_attribute('title')!= '']
-    if len(course_list) == 0:
-        print(color.red(f'获取课程列表失败'), flush=True)
-    else:
-        try:
-            with open(r'task/tool/course_name.json', 'r', encoding='utf-8') as f:
-                dit = json.load(f)
-            with open(r'task/tool/course_name.json', 'w', encoding='utf-8') as f:
-                new_list = dit.get(phone_number,[]) + course_list
-                # 去重
-                new_list = list(set(new_list))
-                dit[phone_number]= new_list
-                json.dump(dit, f)
-            print(color.green(f'保存课程列表成功,共有{len(new_list)}个课程'), flush=True)
-        except:
-            print(color.red('保存课程列表失败'), flush=True)
+    try:
+        have_task_course_element=driver.find_element(By.ID,'stuNormalCourseListDiv')
+        new_course_elements=have_task_course_element.find_elements(By.CLASS_NAME,class_name)
+        if len(course_elements)==0:
+            new_course_elements=course_elements
+        course_list = [course_element.get_attribute('title') for course_element in new_course_elements if
+                       course_element.get_attribute('title')!= '']
+        if len(course_list) == 0:
+            print(color.red(f'获取课程列表失败'), flush=True)
+        else:
+            try:
+                with open(r'task/tool/course_name.json', 'r', encoding='utf-8') as f:
+                    dit = json.load(f)
+                with open(r'task/tool/course_name.json', 'w', encoding='utf-8') as f:
+                    new_list = dit.get(phone_number,[]) + course_list
+                    # 去重
+                    new_list = list(set(new_list))
+                    dit[phone_number]=new_list
+                    json.dump(dit, f)
+                print(color.green(f'保存课程列表成功,共有{len(new_list)}个课程'), flush=True)
+            except:
+                print(color.red('保存课程列表失败'), flush=True)
+    except:
+        print(color.red('保存课程列表失败'), flush=True)
 
+def experience(driver):
+    # 体验最新版本
+    try:
+        element = driver.find_element(By.CLASS_NAME, 'experience')
+        time.sleep(1)
+        element.click()
+        print(color.green('正在体验最新版本'), flush=True)
+    except:
+        pass
 
-def choice_course(driver, course_name,speed,condition,task_type,phone_number):
+def choice_course(driver, course_name,speed,task_type,phone_number):
     # time.sleep(200)
     """
     选择指定名称的课程
@@ -201,13 +148,14 @@ def choice_course(driver, course_name,speed,condition,task_type,phone_number):
     """
     try:
         print(color.green(f'正在定位《{course_name}》...'),flush=True)
+        experience(driver)
         # 查找所有课程名称元素
         course_elements = driver.find_elements(By.CLASS_NAME, 'course-name')
-        class_name="course-name"
-        if len(course_elements)==0:
+        class_name = "course-name"
+        if len(course_elements) == 0:
             course_elements = driver.find_elements(By.CLASS_NAME, 'courseName')
-            class_name="courseName"
-        if len(course_elements)==0:
+            class_name = "courseName"
+        if len(course_elements) == 0:
             # turn_page(driver, '个人空间')
             driver.switch_to.frame('frame_content')
             course_elements = driver.find_elements(By.CSS_SELECTOR, '[class="w_cour_txtH fl"]')
@@ -219,24 +167,11 @@ def choice_course(driver, course_name,speed,condition,task_type,phone_number):
             if  course_name in course_element.get_attribute('title') or course_name in course_element.text:
                 # 滚动到课程名称元素的位置
                 driver.execute_script("arguments[0].scrollIntoView();", course_element)
-                if condition:
-                    set_speed(speed,driver,task_type)
+                set_speed(speed, driver)
                 # 使用 JavaScript 点击课程名称元素
                 driver.execute_script("arguments[0].click();", course_element)
-
                 # 打印选择的课程名称
                 print(color.green(f'您已选择《{course_name}》'), flush=True)
-                #体验最新版本
-                try:
-                    turn_page(driver,course_name)
-                    element=driver.find_element(By.CLASS_NAME,'experience')
-                    time.sleep(1)
-                    element.click()
-                    print(color.green('正在体验最新版本'),flush=True)
-                    # 遍历所有窗口句柄
-                    # choice_course(driver,course_name,speed,False)
-                except:
-                    pass
                 break
         else:
             # 体验最新版本
@@ -249,33 +184,22 @@ def choice_course(driver, course_name,speed,condition,task_type,phone_number):
             if len(element)!=0:
                 element[0].click()
                 driver.find_element(By.XPATH,'//*[@id="stukc"]/div[1]/div[1]/div/div/ul/li[1]').click()
-            choice_course(driver,course_name,speed,condition,task_type,phone_number)
-        turn_page(driver,course_name)
+            choice_course(driver,course_name,speed,task_type,phone_number)
     except :
-
         print(color.red(f"未找到《{course_name}》这门课程，请检查名称是否正确，或手动选择你要刷课的课程，打开该课程后等待片刻"),
               flush=True)
         now_window_handles=len(driver.window_handles)
         while len(driver.window_handles)==now_window_handles:
             time.sleep(1)
-        time.sleep(2)
-        turn_page(driver, course_name)
-        set_speed(speed, driver,task_type)
+        time.sleep(1)
         return
 
-    turn_page(driver,course_name)
+def find_mission(driver,task_type,speed):
+    # experience(driver)
 
-def find_mission(driver,task_type):
+    # 点击开始学习
     try:
-        # 体验最新版本
-        element = driver.find_element(By.CLASS_NAME, 'experience')
-        print(color.green('正在体验最新版本'), flush=True)
-        element.click()
-    except:
-        pass
-    #点击开始学习
-    try:
-        element=driver.find_element(By.CSS_SELECTOR,'[CLASS="start-study readclosecoursepop"]')
+        element = driver.find_element(By.CSS_SELECTOR,'[CLASS="start-study readclosecoursepop"]')
         element.click()
     except:
         pass
@@ -301,6 +225,9 @@ def find_mission(driver,task_type):
     # 打印提示信息，表示已检测到未完成点
     print(color.magenta('已检测到未完成点'),flush=True)
     time.sleep(0.5)
+    #滚动到未完成的任务点的位置
+    driver.execute_script("arguments[0].scrollIntoView();", element)
+    set_speed(speed, driver)
     # 点击待完成任务点的元素
     element.click()
 
@@ -328,8 +255,9 @@ def fold(driver):
     except:
         pass
 
-def set_speed(speed,driver,task_type):
-    if task_type == '作业':
+def set_speed(speed,driver):
+    global condition
+    if not condition:
         return
     print(color.blue(f'调节倍数为：{speed}X'), flush=True)
     try:
@@ -340,10 +268,12 @@ def set_speed(speed,driver,task_type):
             pyautogui.press('d')
             action=ActionChains(driver)
             action.send_keys('d').perform()
-            time.sleep(0.1)
+            time.sleep(0.2)
         print(color.green('调节成功'), flush=True)
+        condition=False
     except Exception as e:
         print(color.yellow(f'调节失败{e}'), flush=True)
+        condition=True
 
 def page_message(driver):
     driver.switch_to.default_content()
@@ -373,11 +303,27 @@ def page_message(driver):
         page_message_lst.append('测验')
     except:
         pass
+    try:
+        driver.find_element(By.CSS_SELECTOR,'[src="/ananas/modules/live/index.html?v=2023-1218-1127"]')
+        page_message_lst.append('直播')
+    except:
+        pass
+    try:
+        driver.find_element(By.CSS_SELECTOR,'[src="/ananas/modules/insertbbs/index.html?v=2025-0109-1519&castscreen=0"]')
+        page_message_lst.append('讨论')
+    except:
+        pass
+    try:
+        driver.find_element(By.CSS_SELECTOR, '[class="ans-attach-online ans-insertaudio"]')
+        page_message_lst.append('音频')
+    except:
+        pass
     driver.implicitly_wait(2)
     return page_message_lst
 
-def run(driver,choice,course_name,API,lock_screen):
+def run(driver,choice,course_name,API,lock_screen,pass_face):
     while True:
+        cond=True
         print(color.green('正在检测页面内容'), flush=True)
         page_message_lst=page_message(driver)
         if len(page_message_lst)==0:
@@ -386,40 +332,55 @@ def run(driver,choice,course_name,API,lock_screen):
             print(color.green(f'该页面含有{page_message_lst}'),flush=True)
             if 'ppt' in page_message_lst:
                 __ppt(driver)
-            if '视频' in page_message_lst:
-                study_page(driver,course_name,lock_screen)
+
+            if '直播' in page_message_lst:
+                print(color.yellow('刷直播的功能还在开发中，请各位提供一下账号，加快开发，我这边无法模拟直播页面，发送至邮箱2022865286@qq.com'
+                                   '感谢支持，采纳的账号将赠送免费API'),flush=True)
+            if '音频' in page_message_lst:
+                play_audio(driver)
+            if '讨论' in page_message_lst:
+                if choice=='DeepSeek AI':
+                    finish_discussion(driver,API)
+                else:
+                    print(color.yellow(f'您已选择{choice}，即将跳过讨论'), flush=True)
             if '测验' in page_message_lst:
                 if choice!='不刷题':
-                    driver.switch_to.default_content()
-                    driver.switch_to.frame('iframe')
-                    test_frames = driver.find_elements(By.XPATH,
-                                                       '//iframe[@src="/ananas/modules/work/index.html?v=2025-1028-1629&castscreen=0"]')
-                    print(color.magenta(f'已检测到{len(test_frames)}个测试'), flush=True)
-                    for test_frame in test_frames:
-                        try:
-                            Answer(driver,test_frame,course_name,API,choice)
-                        except :
-                            error_msg = traceback.format_exc()
-                            send_error("\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n"+error_msg)
-                            print(color.yellow('❌ 出错了，具体原因请前往错误日志查看，请自行保存或提交,15秒后继续'), flush=True)
-                            time.sleep(15)
+                    finish_quiz(driver, course_name, API, choice)
                 else:
                     print(color.yellow('您已选择不刷题，即将跳过测试题'),flush=True)
+            if '视频' in page_message_lst:
+                try:
+                    study_page(driver,course_name,lock_screen)
+                except:
+                    driver.refresh()
+                    print(color.red('出错了，刷新一下'),flush=True)
+                    cond=False
         driver.switch_to.default_content()
-        print(color.green('跳转下一页'), flush=True)
-        try:
-            driver.find_element(By.XPATH, '//*[@id="prevNextFocusNext"]').click()
-        except ElementNotInteractableException:
-            print(color.red('🎉 🎉 该课程全部已完结，撒花！！！'), flush=True)
-            break
-        # 确认
-        try:
-            driver.find_element(By.XPATH, '//*[@id="mainid"]/div[1]/div/div[3]/a[2]').click()
-        except:
-            pass
+        if cond:
+            print(color.green('跳转下一页'), flush=True)
+            try:
+                driver.find_element(By.XPATH, '//*[@id="prevNextFocusNext"]').click()
+            except ElementNotInteractableException:
+                print(color.red('🎉 🎉 该课程全部已完结，撒花！！！'), flush=True)
+                break
+            except NoSuchElementException:
+                print(color.red('加载中...'), flush=True)
+                driver.implicitly_wait(5)
+                driver.find_element(By.XPATH, '//*[@id="prevNextFocusNext"]').click()
+                driver.implicitly_wait(2)
+
+            # 确认
+            try:
+                driver.find_element(By.XPATH, '//*[@id="mainid"]/div[1]/div/div[3]/a[2]').click()
+            except:
+                pass
+        else:
+            if pass_face==1:
+                delete_face_popup(driver)
+                delete_face_popup(driver,'maskDiv1 starttippop faceRecognition_1 chapterVideoFaceMaskDiv')
         time.sleep(1)
 
-def start_browser(browser,driver_path):
+def start_browser(browser,driver_path,speed):
     print(color.green('启动浏览器中...'), flush=True)
     if browser == 'chrome':
         from selenium.webdriver.chrome.service import Service
@@ -431,7 +392,8 @@ def start_browser(browser,driver_path):
     service = Service(driver_path)
     options = Options()
     options.add_argument("--disable-blink-features=AutomationControlled")  # 禁用自动化控制提示
-    options.add_extension(r"task\tool\speed.crx")
+    if speed!='1':
+        options.add_extension(r"task\tool\speed.crx")
     options.add_argument("--enable-extensions")
     options.add_argument("--disable-web-security")
 
@@ -446,23 +408,43 @@ def start_browser(browser,driver_path):
     driver.implicitly_wait(2)
     return driver
 
+def delete_face_popup(driver,class_name='maskDiv1 chapterVideoFaceQrMaskDiv'):
+    try:
+        # 等待弹窗容器出现（最长等待10秒）
+        popup = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, f"[class='{class_name}']"))
+        )
+        # 隐藏弹窗
+        # driver.execute_script("arguments[0].style.display='none';", popup)
+        driver.execute_script("arguments[0].remove();", popup)
+        print(color.green('成功删除人脸弹窗'),flush=True)
+    except Exception as e:
+        pass
 
-def main(browser, driver_path, phone_number, password, choice, course_name, API, lock_screen,speed, task_type,homework):
-    driver = start_browser(browser, driver_path)
-    # set_speed_extension(driver,browser)
+def main(browser, driver_path, phone_number, password, choice, course_name,
+         API, lock_screen,speed, task_type,homework,face_url,pass_face):
+    driver = start_browser(browser, driver_path,speed)
     login_study(driver, phone_number, password)
-    choice_course(driver, course_name, speed, True, task_type,phone_number)
-    time.sleep(1)
-    check_face(driver)
-    find_mission(driver,task_type)
+    choice_course(driver, course_name, speed,  task_type,phone_number)
+    # 获取所有窗口句柄
+    handles = driver.window_handles
+    # 切换到最新打开的标签页
+    driver.switch_to.window(handles[-1])
+    experience(driver)
+    if pass_face==1:
+        check_face(driver,face_url,course_name=course_name)
+        check_face(driver,face_url,face_class='maskDiv',course_name=course_name)
+    find_mission(driver,task_type,speed)
     if task_type=='作业':
         do_work(driver,course_name,homework,API)
         return
-    check_face(driver)
     turn_page(driver, '学生学习页面')
-    check_face(driver)
     fold(driver)
-    run(driver, choice, course_name, API, lock_screen)
+    if pass_face==1:
+        print(color.green('删除人脸中，请耐心等待...'), flush=True)
+        delete_face_popup(driver)
+        delete_face_popup(driver,'maskDiv1 starttippop faceRecognition_1 chapterVideoFaceMaskDiv')
+    run(driver, choice, course_name, API, lock_screen,pass_face)
 
 
 def set_speed_extension(driver, browser):
@@ -589,8 +571,10 @@ def run_main():
     try:
         with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as fil:
             account_info = json.load(fil)
+            course_name = account_info['cour']
         main(account_info['browser'], account_info['driver_path'], account_info['phone_number'], account_info['password'],account_info['choice'],
-            account_info['cour'],account_info['API'],account_info['lock_screen'],account_info['speed'],account_info['task_type'],account_info['homework'])
+            account_info['cour'],account_info['API'],account_info['lock_screen'],account_info['speed'],account_info['task_type'],
+             account_info['homework'],account_info.get(course_name,''),account_info['pass_face'])
     except NoSuchWindowException as e:
         print(color.red('❌ 窗口意外关闭'),flush=True)
     except SessionNotCreatedException as e:

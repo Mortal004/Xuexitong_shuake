@@ -535,7 +535,7 @@ class AnswerMatcher:
             """检测文本中是否含有字母"""
             return bool(re.search(r'[a-zA-Z]', text))
         for answer_result in answers:
-            if answer_result.answer[0] in ["正确", "对", "是", "true", "yes","错误", "错", "否", "false", "no",'答案:',''] or has_letters(answer_result.answer[0]):
+            if answer_result.answer[0] in ["正确", "对", "是", "true", "yes","错误", "错", "否", "false", "no",'答案:',''] :
                 continue
             if answer_result.answer:
                 return {

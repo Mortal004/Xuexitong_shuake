@@ -21,7 +21,18 @@ import requests
 import os
 import customtkinter as ctk
 import pickle
+import logging # For logging
 
+# 设置日志配置
+logging.basicConfig(
+    level=logging.INFO,  # 设置日志级别为 DEBUG，以便捕获更多信息
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("输出记录.log", encoding='utf-8'), # 写入文件
+        # logging.StreamHandler(sys.stdout) # 同时输出到控制台
+    ]
+)
+logger = logging.getLogger(__name__)
 class Start:
     def __init__(self):
         self.process = None
@@ -333,7 +344,7 @@ class Start:
         self.radio_button_3.grid(row=3, column=1, pady=10,columnspan=2, padx=5, sticky="w")
         # 刷题：输入框
         self.question_label = ttk.Label(self.function_set_frame, text="刷题设置:", font=self.font)
-        self.question_options = [ "DeepSeek AI","不刷题"]
+        self.question_options = [ "DeepSeek AI",'随机答题',"不刷题"]
         self.question_entry = ctk.CTkComboBox(self.function_set_frame, values=self.question_options, font=self.font,
                                               button_color=self.button_color,state = 'readonly',command=self.shua_ti_choice,
                                               button_hover_color=self.button_hover_color,
@@ -355,6 +366,10 @@ class Start:
         self.API_entry = ctk.CTkEntry(self.function_set_frame, font=self.font, show='*')
         self.show_api_button = ctk.CTkButton(self.function_set_frame, text="",fg_color='transparent',image=self.show_image,
                                                  command=self.show_api,font=self.font,width=10,height=10)
+        # 跳过人脸
+        self.pass_face_label = ttk.Label(self.function_set_frame, text="跳过人脸：", font=self.font)
+        self.pass_face_check = ctk.CTkSwitch(self.function_set_frame, text="", bg_color=self.frame_fg_color,command=self.pass_face_message,
+                                               font=self.font)
         #防锁屏
         self.lock_screen_label = ttk.Label(self.function_set_frame, text="防锁屏：", font=self.font)
         self.lock_screen_check = ctk.CTkSwitch(self.function_set_frame, text="", bg_color=self.frame_fg_color,
@@ -417,6 +432,12 @@ class Start:
         if self.user_notice=='True':
             # 在初始化完成后显示用户须知弹窗
             self.show_user_notice()
+        else:
+            self.check_update()
+
+    def pass_face_message(self):
+        if self.pass_face_check.get()==1:
+            tk.messagebox.showinfo('提示','只有当你的课程需要人脸认证时才开启')
 
     def delete_record(self, file_name):
         #验证文件是否存在
@@ -444,7 +465,6 @@ class Start:
         except:
             tk.messagebox.showwarning('警告', f'删除失败')
         self.show_question_bank()
-
 
     def prompt(self,choice):
         """提示用户"""
@@ -546,6 +566,7 @@ class Start:
     def close_notice(self, window):
         """关闭用户须知窗口"""
         window.destroy()
+        self.check_update()
 
     def exit_program(self):
         """退出程序"""
@@ -569,15 +590,17 @@ class Start:
         if self.radio_var.get()==1 :
             self.question_label.grid(row=4, column=1, padx=5, pady=5, sticky=tk.W)
             self.question_entry.grid(row=4, column=2, padx=5, pady=5, sticky=tk.W)
-            self.question_entry.configure(values=['DeepSeek AI','不刷题'])
+            self.question_entry.configure(values=['DeepSeek AI','随机答题','不刷题'])
             if self.question_entry.get()=='DeepSeek AI':
                 self.API_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
                 self.API_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
                 self.show_api_button.grid(row=5, column=3, pady=5, sticky=tk.W)
             self.speed_label.grid(row=7, column=1, padx=5, pady=5, sticky=tk.W)
             self.speed_entry.grid(row=7, column=2, padx=5, pady=5, sticky=tk.W)
-            self.lock_screen_label.grid(row=8, column=1, padx=5, pady=5, sticky=tk.W)
-            self.lock_screen_check.grid(row=8, column=2, sticky=tk.W)
+            self.pass_face_label.grid(row=8, column=1, padx=5, pady=5, sticky=tk.W)
+            self.pass_face_check.grid(row=8, column=2, sticky=tk.W)
+            self.lock_screen_label.grid(row=9, column=1, padx=5, pady=5, sticky=tk.W)
+            self.lock_screen_check.grid(row=9, column=2, sticky=tk.W)
             self.homework_label.grid_forget()
             self.homework_entry.grid_forget()
 
@@ -609,6 +632,8 @@ class Start:
             self.API_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
             self.show_api_button.grid(row=5, column=3,  pady=5, sticky=tk.W)
         else:
+            if choice=='随机答题':
+                tk.messagebox.showinfo('提示','请谨慎选择，只有在章节测验不计入总成绩的情况下才能使用，否则因此挂科了请自行承担后果！！！')
             self.API_label.grid_forget()
             self.API_entry.grid_forget()
             self.show_api_button.grid_forget()
@@ -619,10 +644,198 @@ class Start:
                 txt = self.button_text_list[i]
                 self.button_name_list[i].configure(fg_color=self.color_value_dict.get(self.change_theme.get())[0] if name == txt else "transparent")
 
+    def show_cloud_drive_selection(self):
+        """显示网盘选择弹窗（美化版，更新内容单独区域）"""
+        # 创建弹窗窗口
+        selection_window = ctk.CTkToplevel(self.root)
+        selection_window.iconbitmap(r'task\img\xuexitong1 .ico')
+        selection_window.title("发现新版本")
+        selection_window.resizable(False, False)
+        selection_window.transient(self.root)
+        selection_window.grab_set()
+        selection_window.attributes("-topmost", True)  # 确保窗口置前
+
+        # 设置窗口居中
+        selection_window.update_idletasks()
+        x = (selection_window.winfo_screenwidth() // 2) - (500 // 2)
+        y = (selection_window.winfo_screenheight() // 2) - (420 // 2)
+        selection_window.geometry(f"+{x}+{y}")
+
+        # 主容器（圆角背景）
+        main_frame = ctk.CTkFrame(selection_window, corner_radius=20)
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+        # 标题区域（图标+文字）
+        title_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        title_frame.pack(pady=(10, 5))
+
+        icon_label = ctk.CTkLabel(title_frame, text="✨", font=("Segoe UI Emoji", 32))
+        icon_label.pack(side="left", padx=5)
+
+        title_label = ctk.CTkLabel(title_frame,
+                                   text="新版本可用",
+                                   font=("Helvetica", 20, "bold"))
+        title_label.pack(side="left", padx=5)
+
+        # ========= 新增：独立的更新内容区域 =========
+        update_container = ctk.CTkFrame(main_frame, corner_radius=12, fg_color="#f0f0f0",height=10)  # 浅灰底色
+        update_container.pack(pady=(5, 10), padx=10, fill="x")
+
+        # 区域标题（带小图标）
+        update_title_frame = ctk.CTkFrame(update_container, fg_color="transparent")
+        update_title_frame.pack(anchor="w", padx=12, pady=(8, 0))
+
+        update_icon = ctk.CTkLabel(update_title_frame, text="📦", font=("Segoe UI Emoji", 14))
+        update_icon.pack(side="left", padx=(0, 5))
+
+        update_title_label = ctk.CTkLabel(update_title_frame,
+                                          text="更新内容",
+                                          font=("Helvetica", 13, "bold"),
+                                          text_color="#333333")
+        update_title_label.pack(side="left")
+
+        # 删除 update_scroll_frame，直接使用普通 Frame
+        update_content_frame = ctk.CTkFrame(update_container, fg_color="transparent")
+        update_content_frame.pack(fill="x", padx=10, pady=(5,0))
+
+        update_content_label =  ctk.CTkTextbox(update_content_frame, height=110, width=197,fg_color='transparent')
+        update_content_label.insert(tk.END,self.updata_concent)
+        update_content_label.pack(fill="x", padx=5, pady=2)
+
+
+        # ========= 区域2：网盘选择卡片（独立区域） =========
+        drive_container = ctk.CTkFrame(main_frame, corner_radius=12, fg_color="#f0f0f0")
+        drive_container.pack(pady=(0, 10), padx=10, fill="x")
+
+        # 区域标题（带小图标）
+        drive_title_frame = ctk.CTkFrame(drive_container, fg_color="transparent")
+        drive_title_frame.pack(anchor="w", padx=12, pady=(8, 5))
+
+        drive_icon = ctk.CTkLabel(drive_title_frame, text="☁️", font=("Segoe UI Emoji", 14))
+        drive_icon.pack(side="left", padx=(0, 5))
+
+        drive_title_label = ctk.CTkLabel(drive_title_frame,
+                                         text="选择下载方式",
+                                         font=("Helvetica", 13, "bold"),
+                                         text_color="#333333")
+        drive_title_label.pack(side="left")
+
+        # 提示信息（移入网盘区域内）
+        info_label = ctk.CTkLabel(drive_container,
+                                  text="建议使用推荐渠道以获得更快的速度",
+                                  font=("Helvetica", 11),
+                                  text_color="#666666",
+                                  wraplength=440,
+                                  justify="center")
+        info_label.pack(pady=(0, 8), padx=10)
+
+        # 网盘按钮列表（原 drive_frame 内容）
+        cloud_drives = [
+            {
+                "name": "⚡ 迅雷网盘",
+                "url": "https://pan.xunlei.com/s/VO_FdZ-t7lDMpGFgLcuH81DTA1?pwd=viah#",
+                "description": "推荐 ·支持迅雷加速下载",
+                "color": "#00A8FF",
+                "hover": "#33B9FF"
+            },
+            {
+                "name": "☁️ 夸克网盘",
+                "url": "https://pan.quark.cn/s/eba634db1544",
+                "description": " 下载速度快",
+                "color": "#FF6B35",
+                "hover": "#FF8555"
+            },
+            {
+                "name": "🐻 百度网盘",
+                "url": "https://pan.baidu.com/s/1vFpIWyRyX4CW-9j1pdvEpw?pwd=1234",
+                "description": "提取码: 1234",
+                "color": "#4CD964",
+                "hover": "#6DE07E"
+            }
+        ]
+
+        # 内部按钮容器（垂直排列）
+        buttons_frame = ctk.CTkFrame(drive_container, fg_color="transparent")
+        buttons_frame.pack(pady=(0, 12), padx=10, fill="x")
+
+        for drive in cloud_drives:
+            btn_container = ctk.CTkFrame(buttons_frame, fg_color="transparent")
+            btn_container.pack(pady=6, fill="x")
+
+            drive_button = ctk.CTkButton(
+                btn_container,
+                text=f"{drive['name']}\n{drive['description']}",
+                font=("Helvetica", 13, "bold"),
+                fg_color=drive['color'],
+                hover_color=drive['hover'],
+                text_color="white",
+                corner_radius=12,
+                height=70,
+                border_width=0,
+                anchor="center"
+            )
+            drive_button.pack(fill="x")
+            drive_button.configure(command=lambda url=drive['url']: self.open_cloud_drive(url, selection_window))
+
+        # ========= 底部操作栏 =========
+        separator = ctk.CTkFrame(main_frame, height=2, fg_color="gray70")
+        separator.pack(fill="x", pady=(10, 10), padx=30)
+
+        bottom_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        bottom_frame.pack(pady=(0, 10))
+
+        skip_button = ctk.CTkButton(
+            bottom_frame,
+            text="跳过此次更新",
+            font=("Helvetica", 12),
+            fg_color="transparent",
+            hover_color="#E0E0E0",
+            text_color="gray",
+            border_width=2,
+            border_color="gray",
+            corner_radius=8,
+            width=140,
+            height=32
+        )
+        skip_button.pack(side="left", padx=10)
+        skip_button.configure(command=selection_window.destroy)
+
+        reminder_label = ctk.CTkLabel(
+            bottom_frame,
+            text="后续可在「主页」中再次检查更新",
+            font=("Helvetica", 10),
+            text_color="gray"
+        )
+        reminder_label.pack(side="right", padx=10)
+
+        # 键盘绑定（回车默认选择第一个网盘）
+        selection_window.bind('<Return>', lambda e: self.open_cloud_drive(cloud_drives[0]['url'], selection_window))
+        selection_window.bind('<Escape>', lambda e: selection_window.destroy())
+
+    def open_cloud_drive(self, url, window=None):
+        """打开选择的网盘链接"""
+        try:
+            import webbrowser
+            webbrowser.open(url)
+
+            # 显示成功消息
+            tk.messagebox.showinfo("成功", f"已打开浏览器访问网盘链接\n链接已复制到剪贴板")
+
+            # 复制链接到剪贴板
+            self.root.clipboard_clear()
+            self.root.clipboard_append(url)
+
+            # 关闭选择窗口
+            if window:
+                window.destroy()
+
+        except Exception as e:
+            tk.messagebox.showerror("错误", f"打开浏览器失败：{str(e)}")
+
     def check_update(self):
         self.text_box.configure(state=tk.NORMAL)
         # 清空文本框内容
-        self.text_box.delete('1.0', tk.END)
+        # self.text_box.delete('1.0', tk.END)
         # 获取最新的Release信息
         release_url = r'https://api.github.com/repos/Mortal004/Xuexitong_shuake/releases/latest'
         try:
@@ -639,28 +852,36 @@ class Start:
             response = requests.get(release_url, headers=headers)
             if response.status_code == 200:
                 release_info = response.json()
+                self.updata_concent=release_info['body']
                 assets = release_info.get('assets', [])
                 if assets:
-                    self.text_box.insert(tk.END, '连接成功\n')
+                    # self.text_box.insert(tk.END, '连接成功\n')
                     # 获取第一个文件（假设是我们要下载的文件夹压缩包）
                     first_asset = assets[0]
                     download_url = first_asset['browser_download_url']
                     file_name = first_asset['name']
+                    created_time=first_asset['created_at']
 
                     # 读取当前版本信息
                     with open('task/tool/version_info', 'r') as f:
                         version = f.read()
 
-                    if version == file_name:
-                        self.text_box.insert(tk.END, '当前版本为最新版本，无需更新\n')
+                    if version in file_name:
+                        self.text_box.insert(tk.END, '\n当前版本为最新版本，无需更新！')
+                        logger.info(f'当前版本为{version}，与最新版本{file_name}相同，无需更新！')
                     else:
-                        self.text_box.insert(tk.END, '是否为最新版本请以作者的通知为准，如需更新可直接前往网盘下载\n'
-                                                     '夸克网盘：https://pan.quark.cn/s/eba634db1544\n'
-                                                     '或迅雷网盘链接:https://pan.xunlei.com/s/VO_FdZ-t7lDMpGFgLcuH81DTA1?pwd=viah#\n'
-                                             '或百度网盘链接: https://pan.baidu.com/s/1xEoGATUZPk6u3rQYvWnrlQ?pwd=1234 提取码: 1234')
+                        self.text_box.insert(tk.END, '\n检测到有新版本可用')
+                        logger.info(f'当前版本为{version}，与最新版本{file_name}不同，需要更新！')
+
+                        # 创建网盘选择弹窗
+                        self.show_cloud_drive_selection()
+                        # self.text_box.insert(tk.END, '夸克网盘：https://pan.quark.cn/s/eba634db1544\n'
+                        #                              '或迅雷网盘链接:https://pan.xunlei.com/s/VO_FdZ-t7lDMpGFgLcuH81DTA1?pwd=viah#\n'
+                        #                      '或百度网盘链接: https://pan.baidu.com/s/1xEoGATUZPk6u3rQYvWnrlQ?pwd=1234 提取码: 1234')
         except Exception as e:
-            self.text_box.insert(tk.END, '连接失败，请检查网络连接\n')
-            self.text_box.insert(tk.END, f'错误信息：{e}\n')
+            self.text_box.insert(tk.END, '\n检查更新失败，请检查网络连接！')
+            logger.error(f'检查更新失败：{e}')
+            # self.text_box.insert(tk.END, f'错误信息：{e}\n')
 
     def toggle_topmost(self):
         """切换窗口始终置顶属性"""
@@ -774,6 +995,7 @@ class Start:
             self.process = subprocess.Popen(file_name,
                                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             color_tag = None
+            logger.info('======================主程序开始运行======================')
             while True:
                 output = self.process.stdout.readline()
                 if self.process is None:
@@ -815,8 +1037,10 @@ class Start:
                         self.text_box.insert(tk.END, decoded_output, color_tag)
                     else:
                         self.text_box.insert(tk.END, decoded_output)
+                    decoded_output=re.sub(r'[\n\t\r]', '', decoded_output)
+                    if decoded_output.strip():
+                        logger.info(decoded_output)
                     self.text_box.see(tk.END)  # 自动滚动到文本框底部，以显示最新内容
-
             self.process.stdout.close()
             try:
                 self.process.wait()
@@ -848,8 +1072,10 @@ class Start:
                 else:  # Unix 平台
                     os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
                 self.text_box.insert(tk.END, "程序已成功关闭\n")
+                logger.info('======================程序已成功关闭======================')
             except Exception as e:
                 self.text_box.insert(tk.END, f"关闭失败: {e}\n")
+                logger.error(f"======================程序关闭失败: {e}======================")
             finally:
                 self.process = None
 
@@ -956,6 +1182,7 @@ class Start:
             self.account_info['task_type']='作业'
         self.account_info['font_type'] = self.font_entry.get()
         self.account_info['font_size'] = self.size_entry.get()
+        self.account_info['pass_face'] = self.pass_face_check.get()
         self.account_info['lock_screen'] = self.lock_screen_check.get()
         self.account_info['radio_var']=self.radio_var.get()
 
@@ -1002,6 +1229,14 @@ class Start:
                 self.question_entry.set( self.account_info['choice'])
                 self.homework_entry.set( self.account_info['homework'])
                 self.radio_var.set(self.account_info['radio_var'])
+                if self.account_info['pass_face']==0:
+                    self.pass_face_check.deselect()
+                else:
+                    self.pass_face_check.select()
+                if self.account_info['lock_screen']==0:
+                    self.lock_screen_check.deselect()
+                else:
+                    self.lock_screen_check.select()
                 try:
                     self.API_entry.insert(0, self.account_info['API'])
                     self.font_entry.set(self.account_info['font_type'])

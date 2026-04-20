@@ -4,8 +4,10 @@
 # For more information, see the LICENSE file in the root directory of this project.
 import json
 
+from selenium.common import UnexpectedAlertPresentException, NoAlertPresentException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver import ActionChains
-
 import time
 from task.tool import color
 import pyautogui
@@ -87,20 +89,6 @@ def check_video_question(driver):
     except :
         return
 
-def check_face(driver):
-    i=0
-    while i<=20:
-        try:
-            driver.find_element(By.CSS_SELECTOR,"[class='popDiv1 wid640  faceCollectQrPopVideo  popClass faceRecognition_0']")
-            if i==0:
-                print(color.red('请按照要求手机扫码进行人脸认证,如有误判将在20秒后默认您以完成认证'),flush=True)
-            time.sleep(1)
-            i+=1
-        except:
-            if i!=0:
-                print(color.red('人脸认证已完成'), flush=True)
-            break
-
 def check_vido_play(driver,last_time,current_time):
     global b,pause_start_time
     with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as f:
@@ -143,17 +131,35 @@ def check_vido_play(driver,last_time,current_time):
                 pass
             with open(r'task/tool/account_info.json', 'w', encoding='utf-8') as fil:
                 json.dump(account_info, fil)
-
+        elif b==3 and int(speed)==1:
+            raise Exception('视频播放异常')
     else:
         pause_start_time = 0  # 视频正常播放，重置暂停时间记录
         b=0
-
+def handle_video_error_alert(driver):
+    try:
+        alert = driver.switch_to.alert
+        alert_text = alert.text
+        if "视频播放异常" in alert_text:
+            print(color.red("检测到视频播放异常弹窗，尝试刷新页面..."))
+            alert.accept()
+            time.sleep(2)
+            driver.refresh()
+            # 刷新后需要重新进入 iframe，具体逻辑根据实际情况补充
+            raise Exception('视频播放异常')
+        else:
+            alert.accept()
+            raise Exception('视频播放异常')
+    except NoAlertPresentException:
+        return
 def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen):
     last_time = 0
     h = 0
     # 判断是否完成任务
     while True:
         time.sleep(1)
+        # 每次切换前先处理可能存在的弹窗
+        # handle_video_error_alert(driver)
         driver.switch_to.default_content()
         driver.switch_to.frame('iframe')
         elements2 = driver.find_elements(By.CLASS_NAME, 'ans-job-icon-clear ')
@@ -172,6 +178,7 @@ def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen):
             break
         else:
             driver.switch_to.default_content()
+            # check_face(driver,driver.current_url,'popDiv1 wid640  faceCollectQrPopVideo  popClass faceRecognition_0')
             driver.switch_to.frame('iframe')
             driver.switch_to.frame(vido_iframe)
             check_internet(driver)
@@ -197,6 +204,7 @@ def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen):
             if lock_screen:
                 pyautogui.move(20, 0, )
                 pyautogui.move(-20, 0)
+    return True
 
 def study_page(driver,course_name,lock_screen):
     cond=False
@@ -234,7 +242,8 @@ def study_page(driver,course_name,lock_screen):
                 pass
             #点击我知道了
             driver.switch_to.default_content()
-            check_face(driver)
+
+            # check_face(driver,driver.current_url,'popDiv1 wid640  faceCollectQrPopVideo  popClass faceRecognition_0')
             driver.switch_to.frame('iframe')
             driver.switch_to.frame(vido_iframe)
             time.sleep(1)
@@ -266,6 +275,7 @@ def study_page(driver,course_name,lock_screen):
             check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen)
             cond=  True
         driver.switch_to.default_content()
+        # check_face(driver,driver.current_url,'popDiv1 wid640  faceCollectQrPopVideo  popClass faceRecognition_0')
         driver.switch_to.frame('iframe')
     print(color.green('所有视频均已完成'),flush=True)
     if cond and judge_active(driver):

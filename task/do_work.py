@@ -109,12 +109,8 @@ class do_work(Answer):
             self.all_title_dit[i] = self.title_and_option_text
             self.num_option_dit[i] = self.option_text_list
         print(color.red('正在搜索中，请耐心等待...'))
-        try:
-            self.use_ai_wen_da()
-            self.use_deepseek()
-        except Exception as e:
-            print(color.red(f'系统繁忙，请稍后再试：{e}'), flush=True)
-            return
+        self.use_ai_wen_da()
+        self.use_deepseek()
         print(color.green('开始答题'), flush=True)
         for title_num in self.num_answer_dit.keys():
             self.finish_title(title_num)
