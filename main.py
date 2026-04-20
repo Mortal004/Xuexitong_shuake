@@ -21,6 +21,7 @@ from selenium import webdriver
 from task.tool.face import check_face,get_cookie,auto_login_with_cookies
 from task.finish_dicussion import finish_discussion
 from task.play_audio import play_audio
+from task.watch_live import watch_live
 from task.tool import color
 from task.watch_ppt import __ppt
 from task.watch_vido import study_page
@@ -332,10 +333,9 @@ def run(driver,choice,course_name,API,lock_screen,pass_face):
             print(color.green(f'该页面含有{page_message_lst}'),flush=True)
             if 'ppt' in page_message_lst:
                 __ppt(driver)
-
             if '直播' in page_message_lst:
-                print(color.yellow('刷直播的功能还在开发中，请各位提供一下账号，加快开发，我这边无法模拟直播页面，发送至邮箱2022865286@qq.com'
-                                   '感谢支持，采纳的账号将赠送免费API'),flush=True)
+                print(color.yellow('刷直播的功能还在开发中，请各位提供一下账号，加快开发，我这边无法模拟直播页面，发送至邮箱2022865286@qq.com'),flush=True)
+                watch_live(driver)
             if '音频' in page_message_lst:
                 play_audio(driver)
             if '讨论' in page_message_lst:
