@@ -629,7 +629,7 @@ class AutoAnswer:
 # 使用示例
 async def main(typ, question, options,api):
         """主函数 - 添加详细的来源信息输出"""
-        typ_dict = {'单选题': 0, '多选题': 1, '填空题': 2, '判断题': 3, '简答题': 9}
+        typ_dict = {'单选题': 0, '多选题': 1, '填空题': 2, '判断题': 3, '简答题': 9,'论述题':9, '名词解释':9}
     # 创建题目实例
         question_obj = Question(
         type=str(typ_dict[typ]),  # 题目类型
