@@ -413,7 +413,7 @@ class Start:
 
         #----------------赞助页面----------------
         self.label1 = ctk.CTkLabel(self.money_frame, text="如果对您有帮助，欢迎给我打赏,各位的支持就是我更新的最大动力\n"
-                                                          "邮箱地址：2022865286@qq.com\n(获取API的赞助完后一定要发送邮箱告知作者)",
+                                                          "邮箱地址：2022865286@qq.com",
                                    font=self.font,fg_color='transparent')
         self.label1.grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky=tk.W)
         # 加载图片
