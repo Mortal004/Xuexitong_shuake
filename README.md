@@ -91,6 +91,7 @@ pip install selenium pyautogui requests colorama customtkinter openai
 如有任何问题或建议，欢迎通过以下方式联系：
 - **Email**:2022865286@qq.com
 - 或在 [GitHub Issues](https://github.com/Mortal004/Xuexitong_shuake/issues) 中留言
+- 或在 [GitHub Discussion](https://github.com/Mortal004/Xuexitong_shuake/discussion) 中交流，不论是脚本的问题、建议、体验、评价都可可以在这分享，期待你的留言
 
 
 希望这个项目能为你的学习和研究带来帮助，祝你使用愉快！
