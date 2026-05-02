@@ -9,14 +9,18 @@ from task.do_work import turn_page
 from task.common import Common
 
 class Discussion(Common):
-    def __init__(self,driver,API):
-        super().__init__(driver,'[src="/ananas/modules/insertbbs/index.html?v=2025-0109-1519&castscreen=0"]',"讨论")
+    def __init__(self,driver,API,iframe_element):
+        super().__init__(driver,iframe_element,"讨论")
         self.question = None
         self.answer = []
         self.API=API
     def get_answer(self):
         try:
-            self.answer = DeepSeekAsk(self.API, self.question, '简答题')
+            if self.API in ['xuexitong001', 'xuexitong002a', 'xuexitong002b', 'xuexitong002c']:
+                self.answer = DeepSeekAsk(random.choice(['xuexitong002b', 'xuexitong002c', 'xuexitong002a']), self.question,
+                                     '简答题')
+            elif 'sk-' in self.API:
+                self.answer = DeepSeekAsk(self.API, self.question, '简答题')
         except Exception as e:
             print(f'答题时出错了{e}',flush=True)
 
@@ -39,6 +43,6 @@ class Discussion(Common):
         time.sleep(2)
         self.driver.close()
         turn_page(self.driver,'学生学习页面')
-def finish_discussion(driver,API):
-    discussion= Discussion(driver,API)
-    discussion.mian()
+def finish_discussion(driver,API,iframe_element):
+    discussion= Discussion(driver,API,iframe_element)
+    discussion.main()

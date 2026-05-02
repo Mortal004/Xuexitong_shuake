@@ -8,8 +8,8 @@ class Common:
         self.driver.switch_to.default_content()
         self.driver.switch_to.frame(self.driver.find_element(By.CSS_SELECTOR, '[id="iframe"]'))
         self.iframes = self.driver.find_elements(By.CSS_SELECTOR,iframe_element)
-        live_num = len(self.iframes)
-        print(color.green(f'{self.type}数量：{live_num}'))
+        num = len(self.iframes)
+        print(color.green(f'{self.type}数量：{num}'),flush=True)
 
     def check_audio_finished(self):
         # 检查任务点是否已完成
@@ -33,7 +33,7 @@ class Common:
         except:
             print(color.green(f"该{self.type}不存在任务点"), flush=True)
             return False
-    def mian(self):
+    def main(self):
         num=0
         for iframe in self.iframes:
             self.driver.switch_to.default_content()

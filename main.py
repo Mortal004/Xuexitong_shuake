@@ -28,7 +28,7 @@ from task.watch_vido import study_page
 from task.quiz_ai import  finish_quiz
 from task.tool.send_wx import send_error
 from task.do_work import do_work
-
+from task.reading import reading
 condition=True
 
 def login_study(driver,phone_number,password):
@@ -168,7 +168,8 @@ def choice_course(driver, course_name,speed,task_type,phone_number):
             if  course_name in course_element.get_attribute('title') or course_name in course_element.text:
                 # 滚动到课程名称元素的位置
                 driver.execute_script("arguments[0].scrollIntoView();", course_element)
-                set_speed(speed, driver)
+                if task_type!='作业':
+                    set_speed(speed, driver)
                 # 使用 JavaScript 点击课程名称元素
                 driver.execute_script("arguments[0].click();", course_element)
                 # 打印选择的课程名称
@@ -269,7 +270,7 @@ def set_speed(speed,driver):
             pyautogui.press('d')
             action=ActionChains(driver)
             action.send_keys('d').perform()
-            time.sleep(0.2)
+            time.sleep(0.1)
         print(color.green('调节成功'), flush=True)
         condition=False
     except Exception as e:
@@ -278,77 +279,88 @@ def set_speed(speed,driver):
 
 def page_message(driver):
     driver.switch_to.default_content()
-    page_message_lst=[]
+    page_message_dict={}
     driver.implicitly_wait(0)
     try:
         iframe = driver.find_element(By.ID, 'iframe')
         driver.switch_to.frame(iframe)
     except:
-        return page_message_lst
+        return page_message_dict
     try:
         driver.find_element(By.CSS_SELECTOR, '[class="ans-attach-online ans-insertvideo-online"]')
-        page_message_lst.append('视频')
+        page_message_dict['视频']='[class="ans-attach-online ans-insertvideo-online"]'
     except:
         pass
     try:
         driver.find_element(By.CSS_SELECTOR, '[class="ans-attach-online insertdoc-online-ppt"]')
-        page_message_lst.append('ppt')
+        page_message_dict['ppt']='[class="ans-attach-online insertdoc-online-ppt"]'
     except:
         try:
             driver.find_element(By.CSS_SELECTOR,'[class="ans-attach-online insertdoc-online-pdf"]')
-            page_message_lst.append('ppt')
+            page_message_dict['ppt']='[class="ans-attach-online insertdoc-online-pdf"]'
         except:
             pass
     try:
         driver.find_element(By.XPATH,'//iframe[@src="/ananas/modules/work/index.html?v=2025-1028-1629&castscreen=0"]')
-        page_message_lst.append('测验')
+        page_message_dict['测验']='[iframe[@src="/ananas/modules/work/index.html?v=2025-1028-1629&castscreen=0"]'
     except:
         pass
     try:
         driver.find_element(By.CSS_SELECTOR,'[src="/ananas/modules/live/index.html?v=2023-1218-1127"]')
-        page_message_lst.append('直播')
+        page_message_dict['直播']='[src="/ananas/modules/live/index.html?v=2023-1218-1127"]'
     except:
         pass
     try:
         driver.find_element(By.CSS_SELECTOR,'[src="/ananas/modules/insertbbs/index.html?v=2025-0109-1519&castscreen=0"]')
-        page_message_lst.append('讨论')
+        page_message_dict['讨论']='[src="/ananas/modules/insertbbs/index.html?v=2025-0109-1519&castscreen=0"]'
     except:
         pass
     try:
         driver.find_element(By.CSS_SELECTOR, '[class="ans-attach-online ans-insertaudio"]')
-        page_message_lst.append('音频')
+        page_message_dict['音频']='[class="ans-attach-online ans-insertaudio"]'
     except:
         pass
+    try:
+        driver.find_element(By.CSS_SELECTOR,'[class="ans-attach-online ans-book"]')
+        page_message_dict['阅读']='[class="ans-attach-online ans-book"]'
+    except:
+        try:
+            driver.find_element(By.CSS_SELECTOR,'[src="/ananas/modules/read/indexV2.html?v=2026-0227-1121"]')
+            page_message_dict['阅读']='[src="/ananas/modules/read/indexV2.html?v=2026-0227-1121"]'
+        except:
+            pass
     driver.implicitly_wait(2)
-    return page_message_lst
+    return page_message_dict
 
 def run(driver,choice,course_name,API,lock_screen,pass_face):
     while True:
         cond=True
         print(color.green('正在检测页面内容'), flush=True)
-        page_message_lst=page_message(driver)
-        if len(page_message_lst)==0:
+        page_message_dict=page_message(driver)
+        if len(page_message_dict)==0:
             print(color.red('该页面无法识别'),flush=True)
         else:
-            print(color.green(f'该页面含有{page_message_lst}'),flush=True)
-            if 'ppt' in page_message_lst:
+            print(color.green(f'该页面含有{list(page_message_dict.keys())}'),flush=True)
+            if 'ppt' in page_message_dict.keys():
                 __ppt(driver)
-            if '直播' in page_message_lst:
-                print(color.yellow('刷直播的功能还在开发中，请各位提供一下账号，加快开发，我这边无法模拟直播页面，发送至邮箱2022865286@qq.com'),flush=True)
-                watch_live(driver)
-            if '音频' in page_message_lst:
-                play_audio(driver)
-            if '讨论' in page_message_lst:
+            if '直播' in page_message_dict.keys():
+                print(color.yellow('刷直播的功能还在开发中，请各位提供一下账号，加快开发，我这边无法模拟直播页面，发送至邮箱2022865286@qq.com'
+                                   '感谢支持，采纳的账号将赠送免费API'),flush=True)
+            if '音频' in page_message_dict.keys():
+                play_audio(driver,page_message_dict['音频'])
+            if '讨论' in page_message_dict.keys():
                 if choice=='DeepSeek AI':
-                    finish_discussion(driver,API)
+                    finish_discussion(driver,API,page_message_dict['讨论'])
                 else:
                     print(color.yellow(f'您已选择{choice}，即将跳过讨论'), flush=True)
-            if '测验' in page_message_lst:
+            if '测验' in page_message_dict.keys():
                 if choice!='不刷题':
                     finish_quiz(driver, course_name, API, choice)
                 else:
                     print(color.yellow('您已选择不刷题，即将跳过测试题'),flush=True)
-            if '视频' in page_message_lst:
+            if '阅读' in page_message_dict.keys():
+                reading(driver,page_message_dict['阅读'])
+            if '视频' in page_message_dict.keys():
                 try:
                     study_page(driver,course_name,lock_screen)
                 except:
@@ -366,9 +378,16 @@ def run(driver,choice,course_name,API,lock_screen,pass_face):
             except NoSuchElementException:
                 print(color.red('加载中...'), flush=True)
                 driver.implicitly_wait(5)
-                driver.find_element(By.XPATH, '//*[@id="prevNextFocusNext"]').click()
+                try:
+                    driver.find_element(By.XPATH, '//*[@id="prevNextFocusNext"]').click()
+                except :
+                    driver.refresh()
+                    print(color.red('出错了，刷新一下'),flush=True)
+                    if pass_face == 1:
+                        delete_face_popup(driver)
+                        delete_face_popup(driver, 'maskDiv1 starttippop faceRecognition_1 chapterVideoFaceMaskDiv')
+                    fold(driver)
                 driver.implicitly_wait(2)
-
             # 确认
             try:
                 driver.find_element(By.XPATH, '//*[@id="mainid"]/div[1]/div/div[3]/a[2]').click()
@@ -378,6 +397,7 @@ def run(driver,choice,course_name,API,lock_screen,pass_face):
             if pass_face==1:
                 delete_face_popup(driver)
                 delete_face_popup(driver,'maskDiv1 starttippop faceRecognition_1 chapterVideoFaceMaskDiv')
+            fold(driver)
         time.sleep(1)
 
 def start_browser(browser,driver_path,speed):
@@ -394,6 +414,7 @@ def start_browser(browser,driver_path,speed):
     options.add_argument("--disable-blink-features=AutomationControlled")  # 禁用自动化控制提示
     if speed!='1':
         options.add_extension(r"task\tool\speed.crx")
+    options.add_extension(r"task\tool\chrome-extension.crx")
     options.add_argument("--enable-extensions")
     options.add_argument("--disable-web-security")
 

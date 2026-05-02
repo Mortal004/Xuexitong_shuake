@@ -3,12 +3,11 @@
 # This software is provided for non-commercial use only.
 # For more information, see the LICENSE file in the root directory of this project.
 import json
-
-from selenium.common import UnexpectedAlertPresentException, NoAlertPresentException
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver import ActionChains
+from selenium.common import  NoAlertPresentException
 import time
+
+from selenium.webdriver.common.action_chains import ActionChains
+
 from task.tool import color
 import pyautogui
 from selenium.webdriver.common.by import By
@@ -242,8 +241,6 @@ def study_page(driver,course_name,lock_screen):
                 pass
             #点击我知道了
             driver.switch_to.default_content()
-
-            # check_face(driver,driver.current_url,'popDiv1 wid640  faceCollectQrPopVideo  popClass faceRecognition_0')
             driver.switch_to.frame('iframe')
             driver.switch_to.frame(vido_iframe)
             time.sleep(1)
