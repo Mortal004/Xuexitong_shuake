@@ -3,11 +3,14 @@
 # This software is provided for non-commercial use only.
 # For more information, see the LICENSE file in the root directory of this project.
 import json
+
+from pygame.examples.video import answer
 from selenium.common import  NoAlertPresentException
 import time
 
 from selenium.webdriver.common.action_chains import ActionChains
 
+from task.DeepSeekAsk import DeepSeekAsk
 from task.tool import color
 import pyautogui
 from selenium.webdriver.common.by import By
@@ -47,35 +50,42 @@ def check_internet(driver):
     except:
         pass
 
-def check_video_question(driver):
+def check_video_question(driver,deepseek_api):
     try:
         element=driver.find_element(By.CLASS_NAME,'tkTopic')
         print(color.yellow('已检测到视频中有题目'), flush=True)
         try:
-
+            # 获取题目类型和题目
             question_type=element.find_element(By.CLASS_NAME,'tkTopic_type').text
+            question_title = element.find_element(By.CLASS_NAME, 'tkTopic_title').text
         except:
-            question_type=element.find_element(By.CLASS_NAME,'tkTopic_title').text
+            print(color.red('视频途中获取题目失败'), flush=True)
+
+        # 拿到选项和提交按钮
         options = element.find_element(By.CLASS_NAME, 'tkItem_ul')
         options = options.find_elements(By.TAG_NAME, 'li')
         submit = element.find_element(By.ID, 'videoquiz-submit')
         try:
             if question_type=='单选题' or question_type=='判断题':
+                answer = DeepSeekAsk(API_KEY=deepseek_api,title=question_title,_type =question_type)
+                if not answer:
+                    print(color.red('deepseek答题出现问题'), flush=True)
+                answer_str = json.loads(answer)
                 for option in options:
-                    option.click()
-                    #提交
-                    submit.click()
-            elif question_type=='多选题':
-                answer_lost=generate_combinations_list(options)
-                last_ans_set=set()
-                for answer in answer_lost:
-                    now_ans_set=set(answer)
-                    # 使用 ^ 运算符计算对称差集
-                    different_elements = now_ans_set ^ last_ans_set
-                    for option in different_elements:
+                    if option.text.strip()[0] in answer:
                         option.click()
-                    last_ans_set=now_ans_set
-                    #提交
+                        submit.click()
+
+            elif question_type=='多选题':
+                # 拿到答案，是字符串形式的列表
+                answer_str = DeepSeekAsk(API_KEY=deepseek_api, title=question_title, _type=question_type)
+                answer_list = json.loads(answer_str)
+                for option in options:
+                    if option.text.strip()[0] in answer_list:
+                        option.click()
+                    else:
+                        continue
+                else:
                     submit.click()
         except:
             pass
@@ -151,7 +161,7 @@ def handle_video_error_alert(driver):
             raise Exception('视频播放异常')
     except NoAlertPresentException:
         return
-def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen):
+def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen,deepseek_api):
     last_time = 0
     h = 0
     # 判断是否完成任务
@@ -181,7 +191,7 @@ def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen):
             driver.switch_to.frame('iframe')
             driver.switch_to.frame(vido_iframe)
             check_internet(driver)
-            check_video_question(driver)
+            check_video_question(driver,deepseek_api=deepseek_api)
             element = driver.find_element(By.CLASS_NAME, 'vjs-current-time-display')
             current_time = element.text
             check_vido_play(driver, last_time, current_time)
@@ -205,7 +215,7 @@ def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen):
                 pyautogui.move(-20, 0)
     return True
 
-def study_page(driver,course_name,lock_screen):
+def study_page(driver,course_name,lock_screen,deepseek_api):
     cond=False
     driver.switch_to.default_content()
     driver.switch_to.frame('iframe')
@@ -269,7 +279,7 @@ def study_page(driver,course_name,lock_screen):
             driver.switch_to.frame('iframe')
             b = 0
             pause_start_time = 0  # 添加变量记录暂停开始时间
-            check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen)
+            check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen,deepseek_api)
             cond=  True
         driver.switch_to.default_content()
         # check_face(driver,driver.current_url,'popDiv1 wid640  faceCollectQrPopVideo  popClass faceRecognition_0')

@@ -362,7 +362,7 @@ def run(driver,choice,course_name,API,lock_screen,pass_face):
                 reading(driver,page_message_dict['阅读'])
             if '视频' in page_message_dict.keys():
                 try:
-                    study_page(driver,course_name,lock_screen)
+                    study_page(driver,course_name,lock_screen,API)
                 except:
                     driver.refresh()
                     print(color.red('出错了，刷新一下'),flush=True)
