@@ -343,7 +343,17 @@ class Start:
                                                            value=3,text="自动完成考试",command=self.function_choice)
         self.radio_button_3.grid(row=3, column=1, pady=10,columnspan=2, padx=5, sticky="w")
         # 刷题：输入框
-        self.question_label = ttk.Label(self.function_set_frame, text="刷题设置:", font=self.font)
+        self.vido_question_label = ttk.Label(self.function_set_frame, text="视频题目:", font=self.font)
+        self.vido_question_options = ["DeepSeek AI", '随机答题']
+        self.vido_question_entry = ctk.CTkComboBox(self.function_set_frame, values=self.vido_question_options, font=self.font,
+                                              button_color=self.button_color, state='readonly',
+                                              command=lambda _:self.shua_ti_choice('视频题目'),
+                                              button_hover_color=self.button_hover_color,
+                                              dropdown_fg_color=self.frame_fg_color,
+                                              dropdown_hover_color=self.button_color,
+                                              )
+        self.vido_question_entry.set('随机答题')
+        self.question_label = ttk.Label(self.function_set_frame, text="章节测验:", font=self.font)
         self.question_options = [ "DeepSeek AI",'随机答题',"不刷题"]
         self.question_entry = ctk.CTkComboBox(self.function_set_frame, values=self.question_options, font=self.font,
                                               button_color=self.button_color,state = 'readonly',command=self.shua_ti_choice,
@@ -384,7 +394,7 @@ class Start:
                                               )
         self.homework_entry.configure(state = 'readonly')
         self.combobox_lst=[ self.change_theme,self.speed_entry,self.question_entry,self.cour_entry,self.size_entry,self.homework_entry,
-                            self.font_entry, self.browser_entry,self.course_score_entry,self.course_vido_entry]
+                            self.font_entry, self.browser_entry,self.course_score_entry,self.course_vido_entry,self.vido_question_entry]
 
         # 创建保存按钮
         self.save_button = ctk.CTkButton(self.set_frame, text="保存", command=self.save,
@@ -590,53 +600,62 @@ class Start:
         if self.radio_var.get()==1 :
             self.question_label.grid(row=4, column=1, padx=5, pady=5, sticky=tk.W)
             self.question_entry.grid(row=4, column=2, padx=5, pady=5, sticky=tk.W)
+            self.vido_question_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
+            self.vido_question_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
             self.question_entry.configure(values=['DeepSeek AI','随机答题','不刷题'])
-            if self.question_entry.get()=='DeepSeek AI':
-                self.API_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
-                self.API_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
-                self.show_api_button.grid(row=5, column=3, pady=5, sticky=tk.W)
-            self.speed_label.grid(row=7, column=1, padx=5, pady=5, sticky=tk.W)
-            self.speed_entry.grid(row=7, column=2, padx=5, pady=5, sticky=tk.W)
-            self.pass_face_label.grid(row=8, column=1, padx=5, pady=5, sticky=tk.W)
-            self.pass_face_check.grid(row=8, column=2, sticky=tk.W)
-            self.lock_screen_label.grid(row=9, column=1, padx=5, pady=5, sticky=tk.W)
-            self.lock_screen_check.grid(row=9, column=2, sticky=tk.W)
+            if self.question_entry.get()=='DeepSeek AI' or self.vido_question_entry.get()=='DeepSeek AI':
+                self.API_label.grid(row=6, column=1, padx=5, pady=5, sticky=tk.W)
+                self.API_entry.grid(row=6, column=2, padx=5, pady=5, sticky=tk.W)
+                self.show_api_button.grid(row=6, column=3, pady=5, sticky=tk.W)
+            self.speed_label.grid(row=8, column=1, padx=5, pady=5, sticky=tk.W)
+            self.speed_entry.grid(row=8, column=2, padx=5, pady=5, sticky=tk.W)
+            self.pass_face_label.grid(row=9, column=1, padx=5, pady=5, sticky=tk.W)
+            self.pass_face_check.grid(row=9, column=2, sticky=tk.W)
+            self.lock_screen_label.grid(row=10, column=1, padx=5, pady=5, sticky=tk.W)
+            self.lock_screen_check.grid(row=10, column=2, sticky=tk.W)
             self.homework_label.grid_forget()
             self.homework_entry.grid_forget()
 
         elif self.radio_var.get()==2:
             if self.user_notice == 'True':
                 self.homework_entry.set('')
-                tk.messagebox.showinfo('提示', '该功能刚刚开发完成...,难免出错，谢谢理解')
             self.question_label.grid(row=4, column=1, padx=5, pady=5, sticky=tk.W)
             self.question_entry.grid(row=4, column=2, padx=5, pady=5, sticky=tk.W)
             self.question_entry.set('DeepSeek AI')
             self.question_entry.configure(values=['DeepSeek AI'])
-            self.API_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
-            self.API_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
-            self.show_api_button.grid(row=5, column=3, pady=5, sticky=tk.W)
+            self.API_label.grid(row=6, column=1, padx=5, pady=5, sticky=tk.W)
+            self.API_entry.grid(row=6, column=2, padx=5, pady=5, sticky=tk.W)
+            self.show_api_button.grid(row=6, column=3, pady=5, sticky=tk.W)
             self.homework_label.grid(row=7, column=1, padx=5, pady=5, sticky=tk.W)
             self.homework_entry.grid(row=7, column=2, padx=5, pady=5, sticky=tk.W)
             self.speed_label.grid_forget()
             self.speed_entry.grid_forget()
             self.lock_screen_label.grid_forget()
             self.lock_screen_check.grid_forget()
+            self.vido_question_label.grid_forget()
+            self.vido_question_entry.grid_forget()
+            self.turn_money()
         else:
             tk.messagebox.showinfo('提示', '该功能还在开发中...,敬请期待')
             self.radio_var.set(1)
             self.function_choice()
 
-    def shua_ti_choice(self,choice):
-        if choice=='DeepSeek AI':
-            self.API_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
-            self.API_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
-            self.show_api_button.grid(row=5, column=3,  pady=5, sticky=tk.W)
+    def shua_ti_choice(self, event):
+        if self.question_entry.get() == '随机答题' and event != '视频题目':
+            tk.messagebox.showinfo('提示',
+                                   '请谨慎选择，只有在章节测验不计入总成绩的情况下才能使用，否则因此挂科了请自行承担后果！！！')
+        if self.vido_question_entry.get()=='DeepSeek AI' or self.question_entry.get()=='DeepSeek AI':
+            if self.vido_question_entry.get()=='DeepSeek AI' and event=='视频题目':
+                tk.messagebox.showinfo('提示','这个是用于完成视频中弹出的题目，'
+                                              '只有在选错答案会回退视频的情况下才建议使用DeepSeek AI，一般情况请使用随机答题,没有任何影响')
+            self.API_label.grid(row=6, column=1, padx=5, pady=5, sticky=tk.W)
+            self.API_entry.grid(row=6, column=2, padx=5, pady=5, sticky=tk.W)
+            self.show_api_button.grid(row=6, column=3,  pady=5, sticky=tk.W)
         else:
-            if choice=='随机答题':
-                tk.messagebox.showinfo('提示','请谨慎选择，只有在章节测验不计入总成绩的情况下才能使用，否则因此挂科了请自行承担后果！！！')
-            self.API_label.grid_forget()
-            self.API_entry.grid_forget()
-            self.show_api_button.grid_forget()
+            if self.vido_question_entry!='DeepSeek AI' and self.question_entry!='DeepSeek AI':
+                self.API_label.grid_forget()
+                self.API_entry.grid_forget()
+                self.show_api_button.grid_forget()
 
     def select_frame_by_name(self, name):
         # set button color for selected button
@@ -1156,7 +1175,7 @@ class Start:
         else:
             self.account_info['cour'] = self.cour_entry.get().replace('\n', '')
         if self.question_entry.get() ==''  :
-            tk.messagebox.showerror('警告', message='请选择选择刷题设置')
+            tk.messagebox.showerror('警告', message='请完成章节测验刷题设置')
             return False
         else:
             self.account_info['choice'] = self.question_entry.get()
@@ -1227,6 +1246,8 @@ class Start:
                 self.password_entry.insert(0, self.account_info['password'])
                 self.cour_entry.set( self.account_info['cour'])
                 self.question_entry.set( self.account_info['choice'])
+                if self.account_info['video_title_choice']!='':
+                    self.vido_question_entry.set( self.account_info['video_title_choice'])
                 self.homework_entry.set( self.account_info['homework'])
                 self.radio_var.set(self.account_info['radio_var'])
                 if self.account_info['pass_face']==0:

@@ -5,14 +5,13 @@
 
 #打包python -m PyInstaller --onefile --collect-all selenium main.py
 import json
-import pickle
 import re
 import sys
 import time
 import traceback
 from selenium.webdriver.support import expected_conditions as EC
 import pyautogui
-from selenium.common import NoSuchDriverException, NoSuchWindowException, WebDriverException, \
+from selenium.common import  NoSuchWindowException, WebDriverException, \
     ElementNotInteractableException, SessionNotCreatedException,NoSuchElementException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.support.wait import WebDriverWait
@@ -180,7 +179,8 @@ def choice_course(driver, course_name,speed,task_type,phone_number):
             element=driver.find_element(By.CSS_SELECTOR,".experience")
             print(color.green('正在体验最新版本'), flush=True)
             element.click()
-            turn_page(driver,'新泛雅')
+            if not turn_page(driver,'新泛雅'):
+                turn_page(driver,'课程')
             element=driver.find_elements(By.XPATH,'//*[@id="stukc"]/div[1]/div[1]/div/a')
             time.sleep(2)
             if len(element)!=0:
@@ -211,8 +211,6 @@ def find_mission(driver,task_type,speed):
         if element.text== task_type:
             element.click()
             break
-
-
     driver.switch_to.frame(driver.find_element(By.TAG_NAME,'iframe'))
     # 切换到名为 frame_content-zj 的 iframe
     if task_type == '作业':
@@ -243,10 +241,10 @@ def turn_page(driver,page_name):
         if page_name in driver.title:
             # print(driver.title)
             # 如果是，那么这时候WebDriver对象就是对应的该该窗口，正好，跳出循环，
-            break
+            return True
         else:
             continue
-
+    return False
     #折叠侧边目录
 
 def fold(driver):
@@ -332,7 +330,7 @@ def page_message(driver):
     driver.implicitly_wait(2)
     return page_message_dict
 
-def run(driver,choice,course_name,API,lock_screen,pass_face):
+def run(driver,choice,course_name,API,lock_screen,pass_face,video_title_choice):
     while True:
         cond=True
         print(color.green('正在检测页面内容'), flush=True)
@@ -362,7 +360,7 @@ def run(driver,choice,course_name,API,lock_screen,pass_face):
                 reading(driver,page_message_dict['阅读'])
             if '视频' in page_message_dict.keys():
                 try:
-                    study_page(driver,course_name,lock_screen,API)
+                    study_page(driver,course_name,lock_screen,API,video_title_choice)
                 except:
                     driver.refresh()
                     print(color.red('出错了，刷新一下'),flush=True)
@@ -443,14 +441,11 @@ def delete_face_popup(driver,class_name='maskDiv1 chapterVideoFaceQrMaskDiv'):
         pass
 
 def main(browser, driver_path, phone_number, password, choice, course_name,
-         API, lock_screen,speed, task_type,homework,face_url,pass_face):
+         API, lock_screen,speed, task_type,homework,face_url,pass_face,video_title_choice):
     driver = start_browser(browser, driver_path,speed)
     login_study(driver, phone_number, password)
     choice_course(driver, course_name, speed,  task_type,phone_number)
-    # 获取所有窗口句柄
-    handles = driver.window_handles
-    # 切换到最新打开的标签页
-    driver.switch_to.window(handles[-1])
+    turn_page(driver, course_name)
     experience(driver)
     if pass_face==1:
         check_face(driver,face_url,course_name=course_name)
@@ -465,7 +460,7 @@ def main(browser, driver_path, phone_number, password, choice, course_name,
         print(color.green('删除人脸中，请耐心等待...'), flush=True)
         delete_face_popup(driver)
         delete_face_popup(driver,'maskDiv1 starttippop faceRecognition_1 chapterVideoFaceMaskDiv')
-    run(driver, choice, course_name, API, lock_screen,pass_face)
+    run(driver, choice, course_name, API, lock_screen,pass_face,video_title_choice)
 
 
 def set_speed_extension(driver, browser):
@@ -595,7 +590,7 @@ def run_main():
             course_name = account_info['cour']
         main(account_info['browser'], account_info['driver_path'], account_info['phone_number'], account_info['password'],account_info['choice'],
             account_info['cour'],account_info['API'],account_info['lock_screen'],account_info['speed'],account_info['task_type'],
-             account_info['homework'],account_info.get(course_name,''),account_info['pass_face'])
+             account_info['homework'],account_info.get(course_name,''),account_info['pass_face'],account_info['video_title_choice'])
     except NoSuchWindowException as e:
         print(color.red('❌ 窗口意外关闭'),flush=True)
     except SessionNotCreatedException as e:
