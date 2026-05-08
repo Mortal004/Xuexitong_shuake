@@ -344,6 +344,7 @@ def run(driver,choice,course_name,API,lock_screen,pass_face,video_title_choice):
             if '直播' in page_message_dict.keys():
                 print(color.yellow('刷直播的功能还在开发中，请各位提供一下账号，加快开发，我这边无法模拟直播页面，发送至邮箱2022865286@qq.com'
                                    '感谢支持，采纳的账号将赠送免费API'),flush=True)
+                watch_live(driver)
             if '音频' in page_message_dict.keys():
                 play_audio(driver,page_message_dict['音频'])
             if '讨论' in page_message_dict.keys():

@@ -634,7 +634,6 @@ class Start:
             self.lock_screen_check.grid_forget()
             self.vido_question_label.grid_forget()
             self.vido_question_entry.grid_forget()
-            self.turn_money()
         else:
             tk.messagebox.showinfo('提示', '该功能还在开发中...,敬请期待')
             self.radio_var.set(1)
