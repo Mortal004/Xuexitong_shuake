@@ -22,7 +22,37 @@ import os
 import customtkinter as ctk
 import pickle
 import logging # For logging
+class ToolTip:
+    """简单的悬停提示类"""
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tip_window = None
+        self.widget.bind('<Enter>', self.show_tip)
+        self.widget.bind('<Leave>', self.hide_tip)
 
+    def show_tip(self, event=None):
+        # 获取鼠标指针的屏幕坐标
+        x = self.widget.winfo_pointerx() + 10
+        y = self.widget.winfo_pointery() + 10
+        self.tip_window = tk.Toplevel(self.widget)
+        self.tip_window.wm_overrideredirect(True)
+        self.tip_window.wm_geometry(f"+{x}+{y}")
+        self.tip_window.wm_attributes("-topmost", True)
+
+        label = tk.Label(self.tip_window, text=self.text, justify='left',
+                         background="#ffffe0", relief='solid', borderwidth=1,
+                         font=("微软雅黑", 10))
+        label.pack()
+
+    def hide_tip(self, event=None):
+        if self.tip_window:
+            self.tip_window.destroy()
+            self.tip_window = None
+
+    def set_text(self, new_text):
+        """动态修改提示文本"""
+        self.text = new_text
 # 设置日志配置
 logging.basicConfig(
     level=logging.INFO,  # 设置日志级别为 DEBUG，以便捕获更多信息
@@ -35,6 +65,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 class Start:
     def __init__(self):
+        self.dynamic_rows = []
         self.process = None
         self.colorama_to_tkinter = {
             'RED': 'red',
@@ -43,21 +74,23 @@ class Start:
             'GREEN': 'green',
             'MAGENTA': 'magenta'
         }
+        self.color_value_dict={
+            '海洋蓝': ['#1E88E5', '#E3F2FD', '#81AED1'],
+            '清新绿': ['#2E7D32', '#E8F5E9', '#A5D6A7'],
+            '暖阳橙': ['#F57C00', '#FFF3E0', '#FFB74D'],
+            '淡雅灰': ['#607D8B', '#ECEFF1', '#B0BEC5'],
+            '天空湖': ['#00838F', '#E0F7FA', '#80DEEA'],
+            '深邃夜': ['#2C3E50', '#ECF0F1', '#BDC3C7'],
+            '紫罗兰': ['#6A1B9A', '#F3E5F5', '#CE93D8']}# 颜色值字典[深，浅,中]
         self.font = ("Helvetica", 13)
-        self.frame_fg_color = "#E3F2FD"
-        self.button_color = "#1F6AA5"
-        self.button_hover_color='#81AED1'
-        self.color_value_dict={'blue':['#1F6AA5','#E3F2FD','#81AED1'],
-                                'green':['#2CC985','#E8F5E9','#8ADFB7'],
-                                "red": ["#FF3333", "#FF9999", "#FF6666"],
-                                "gray": ["#666666", "#CCCCCC", "#999999"],
-                                'sky-lake':["#3399CC","#CCFFFF","#7FCCE5"],
-                               'deep-light':["#115577","#DDFFFF","#77AABB"],
-                               'blue-light':['#4488BB','#EEEEFF',"#99BBDD"]}# 颜色值字典[深，浅,中]
-        self.record_color_lst= ['blue']
+        self.record_color_lst= ['海洋蓝']
+
+        self.frame_fg_color = self.color_value_dict[self.record_color_lst[0]][1]
+        self.button_color = self.color_value_dict[self.record_color_lst[0]][0]
+        self.button_hover_color = self.color_value_dict[self.record_color_lst[0]][2]
         self.root = ctk.CTk()
         ctk.set_appearance_mode("light")
-        self.root.geometry("+1290+20")  # 设置窗口大小
+        self.root.geometry("+1050+20")  # 设置窗口大小
         with open(r'task/tool/version_info','r',encoding='utf-8') as f:
             version_info=f.read()
             self.root.title(f'学习通刷课  {version_info}')
@@ -75,24 +108,26 @@ class Start:
         self.root.resizable(False, False)  # 禁止用户调整窗口大小
          # 使用ico格式的图标文件
         self.root.iconbitmap(r'task\img\xuexitong1 .ico')
-        #透明度
-        self.root.attributes('-alpha',1)
-        #加载图片
-        self.menu_image = ctk.CTkImage(light_image=Image.open(r"task\img\menu.png"), size=(30, 30))
-        self.fold_image = ctk.CTkImage(light_image=Image.open(r"task\img\fold.png"), size=(15, 30))
-        self.open_image = ctk.CTkImage(light_image=Image.open(r"task\img\open.png"), size=(15, 30))
-        self.show_image = ctk.CTkImage(light_image=Image.open(r"task\img\show.png"), size=(15, 10))
-        self.image_name_list = ['home_dark.png','set.png','help.png','vido.png','score.png','find.png','error.png','give_money.png']
-        self.image_list = ['home_image','set_image','help_image','vido_image','score_image','question_bank_image','error_image','money_image']
-        for i in range(len(self.image_name_list)):
-            self.image_list[i] = ctk.CTkImage(light_image=Image.open(r"task\img\{}".format(self.image_name_list[i])), size=(20, 20))
+        self.root.attributes('-alpha', 1)
+
+        # 加载图标
+        self.menu_image = ctk.CTkImage(light_image=Image.open(r"task\img\menu.png"), size=(24, 24))
+        self.fold_image = ctk.CTkImage(light_image=Image.open(r"task\img\fold.png"), size=(12, 20))
+        self.open_image = ctk.CTkImage(light_image=Image.open(r"task\img\open.png"), size=(12, 20))
+        self.show_image = ctk.CTkImage(light_image=Image.open(r"task\img\show.png"), size=(16, 12))
+        self.add_image  = ctk.CTkImage(light_image=Image.open(r"task\img\add.png"), size=(18, 19))
+        self.image_name_list = ['home_dark.png', 'set.png', 'help.png', 'vido.png', 'score.png', 'find.png',
+                                'error.png', 'give_money.png']
+        self.image_list = []
+        for name in self.image_name_list:
+            self.image_list.append(ctk.CTkImage(light_image=Image.open(rf"task\img\{name}"), size=(20, 20)))
 
         # ----------------创建菜单页面----------------
-        self.navigation_frame = ctk.CTkFrame(self.root, corner_radius=0,fg_color=self.frame_fg_color)
+        self.navigation_frame = ctk.CTkFrame(self.root, corner_radius=0,fg_color=self.button_hover_color,width=20)
         self.navigation_frame.grid(row=0, column=0,rowspan=2, sticky="nsew")
         self.navigation_frame.grid_rowconfigure(9, weight=1)
         #----------------展开页面----------------
-        self.open_frame= ctk.CTkFrame(self.root, corner_radius=0,width=10,fg_color=self.frame_fg_color)
+        self.open_frame= ctk.CTkFrame(self.root, corner_radius=0,width=0,fg_color=self.frame_fg_color)
         #设置权重
         self.open_frame.grid_rowconfigure(0, weight=1)
         self.open_button = ctk.CTkButton(self.open_frame, corner_radius=0,width=10,height=40, border_spacing=10,
@@ -112,16 +147,16 @@ class Start:
                                          hover_color=self.button_color,
                                          anchor="e", command=self.fold_frame)
         self.fold_button.grid(row=9, column=0, sticky="new")
-        self.button_text_list = ["主页","设置","帮助","刷课日志","测试成绩","题库查询","报错日志","赞助作者"]
+        self.button_text_list = ["主页","设置","帮助","刷课日志   ","测试成绩","题库查询","报错日志","赞助作者"]
         self.button_command_list = [self.show_main, self.show_set, self.show_help, lambda:self.show_record('刷课'), lambda:self.show_record('成绩'), self.show_question_bank, self.show_error, self.show_money]
         self.button_name_list = ['home_button','set_button','help_button','vido_button','score_button','question_bank_button','error_button','money_button',self.open_button,self.fold_button]
         for i in range(len(self.button_text_list)):
-            self.button_name_list[i] = ctk.CTkButton(self.navigation_frame, corner_radius=0,width=10,height=40, border_spacing=10,
+            self.button_name_list[i] = ctk.CTkButton(self.navigation_frame, corner_radius=10,width=20,height=40, border_spacing=10,
                                                    text=self.button_text_list[i],font=self.font,image=self.image_list[i],
                                                    fg_color="transparent", text_color='black',
                                                    hover_color=self.button_color, anchor="w",
                                                     command=self.button_command_list[i])
-            self.button_name_list[i].grid(row=i+1, column=0, sticky="ew")
+            self.button_name_list[i].grid(row=i+1, column=0,padx=8, pady=3,sticky="ew")
         self.change_theme = ctk.CTkOptionMenu(self.navigation_frame,values=[i for i in self.color_value_dict.keys()],
                                                 width=10,fg_color='#F9F9FA',font=self.font,text_color='black',
                                                 dropdown_fg_color=self.frame_fg_color,button_color=self.button_color,
@@ -147,15 +182,15 @@ class Start:
 
         # ---------------- 主页 ----------------
         # 启动程序按钮
-        self.start_button = ctk.CTkButton(self.main_frame, text="开始刷课",height=40, border_spacing=10,fg_color=self.button_color,
+        self.start_button = ctk.CTkButton(self.main_frame, text="▶ 开始刷课",height=40, border_spacing=10,fg_color=self.button_color,
                                           command=self.start, font=self.font,hover_color=self.button_hover_color)
         self.start_button.grid(row=0, column=0,padx=5, pady=10)
         # 关闭程序按钮
-        self.close_button = ctk.CTkButton(self.main_frame, text="结束刷课",height=40, border_spacing=10,fg_color=self.button_color,
-                                          command=self.close,font=self.font,hover_color=self.button_hover_color)
+        self.close_button = ctk.CTkButton(self.main_frame, text="■ 结束刷课",height=40, border_spacing=10,fg_color=self.button_color, hover_color=self.button_hover_color,
+                                          command=self.close,font=self.font)
         self.close_button.grid(row=0, column=1,padx=5,  pady=10)
         #更新
-        self.update_button = ctk.CTkButton(self.main_frame, text="检查更新",height=40, border_spacing=10,fg_color=self.button_color,
+        self.update_button = ctk.CTkButton(self.main_frame, text="↻ 检查更新",height=40, border_spacing=10,fg_color=self.button_color,
                                            command=self.check_update,font=self.font,hover_color=self.button_hover_color)
         self.update_button.grid(row=0, column=2,padx=5,  pady=10)
         # 创建只读文本框#202022
@@ -176,11 +211,7 @@ class Start:
         self.text_box.configure(border_color='gray', border_width=1)
         self.text_box.configure( state=tk.DISABLED)
         self.text_box.grid(row=1, column=0, columnspan=3, padx=10, pady=10, sticky=tk.W+tk.E+tk.N+tk.S)
-        # 创建标签
-        self.progress_label = ctk.CTkLabel(self.main_frame, text="当前进度：0.0%", font=self.font,
-                                           fg_color='transparent')
-        # 创建进度条
-        self.progress_bar = ctk.CTkProgressBar(self.main_frame, width=250, height=20)
+
         # ---------------- 刷课记录 ----------------
         # 下拉选项框（包含可输入部分）
         self.course_vido_entry = ctk.CTkComboBox(self.vido_frame, dropdown_font=self.font, values=[],
@@ -197,8 +228,8 @@ class Start:
                                           font=self.font, hover_color=self.button_hover_color)
         self.find_button1.grid(row=0, column=1, padx=1, pady=5, sticky=tk.W)  # 使用 sticky 参数使组件填满整个单元格
         self.delete_button1 = ctk.CTkButton(self.vido_frame, text="删除记录",
-                                            command=lambda: self.delete_record('刷课'), fg_color=self.button_color,
-                                            font=self.font, hover_color=self.button_hover_color)
+                                            command=lambda: self.delete_record('刷课'), fg_color="#F87171", hover_color="#EF4444",
+                                            font=self.font)
         self.delete_button1.grid(row=0, column=2, padx=1, pady=5)
         # 配置按钮框架的列权重，使按钮居中
         self.score_frame.rowconfigure(0, weight=1)
@@ -224,8 +255,8 @@ class Start:
         self.find_button2 = ctk.CTkButton(self.score_frame, text="查询", command=lambda:self.show_record('成绩'), fg_color=self.button_color,
                                           font=self.font, hover_color=self.button_hover_color)
         self.find_button2.grid(row=0, column=1, padx=1, pady=5)  # 使用 sticky 参数使组件填满整个单元格
-        self.delete_button2=ctk.CTkButton(self.score_frame, text="删除记录", command=lambda: self.delete_record('成绩'), fg_color=self.button_color,
-                                          font=self.font, hover_color=self.button_hover_color)
+        self.delete_button2=ctk.CTkButton(self.score_frame, text="删除记录", command=lambda: self.delete_record('成绩'), fg_color="#F87171", hover_color="#EF4444",
+                                          font=self.font)
         self.delete_button2.grid(row=0, column=2, padx=1, pady=5)
         # 配置按钮框架的列权重，使按钮居中
         self.score_frame.rowconfigure(0, weight=1)
@@ -240,170 +271,210 @@ class Start:
         self.tiku_text = ctk.CTkTextbox(self.question_bank_frame, height=600, width=437,font=self.font,fg_color='transparent')
         self.tiku_text.configure(state=tk.DISABLED)
         self.tiku_text.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky=tk.W+tk.E+tk.N+tk.S)
-        self.delete_tiku_button=ctk.CTkButton(self.question_bank_frame, text="删除所有缓存题目", command=self.delete_huancun, fg_color=self.button_color,
-                                          font=self.font, hover_color=self.button_hover_color)
+        self.delete_tiku_button = ctk.CTkButton(
+            self.question_bank_frame, text="删除所有缓存题目", command=self.delete_huancun,
+            fg_color="#F87171", hover_color="#EF4444", corner_radius=16, height=36
+        )
         self.delete_tiku_button.grid(row=2, column=0, padx=1, pady=5,columnspan=2,sticky=tk.W+tk.E)
 
         # ---------------- 设置 ----------------
-        self.style=ttk.Style()
-        self.style.configure('TLabelframe',background=self.frame_fg_color,borderwidth=10)
-        self.style.configure('TLabelframe.Label',background=self.frame_fg_color,font=self.font)
-        self.style.configure('TLabel',background=self.frame_fg_color)
-        #配置设置
-        self.configuration_set_frame=ttk.LabelFrame(self.set_frame, text="配置设置：",relief='ridge')
-        self.configuration_set_frame.grid(row=0,column=0,sticky="nsew", padx=5, pady=5)
-        #browser
-        self.browser_label = ttk.Label(self.configuration_set_frame, text="浏览器:", font=self.font)
-        self.browser_label.grid(row=0, column=1, padx=5, pady=10, sticky=tk.W)
-        self.browser_options = ['不指定浏览器','edge','chrome']
-        self.browser_entry = ctk.CTkComboBox(self.configuration_set_frame,state = 'readonly',
-                                             button_color=self.button_color, button_hover_color=self.button_hover_color,
-                                             dropdown_fg_color=self.frame_fg_color, command=self.auto_fill_browser_driver,
-                                             dropdown_hover_color=self.button_color,
-                                             values=self.browser_options, font=self.font)
-        self.browser_entry.grid(row=0, column=2, padx=5, pady=10, sticky=tk.W)
-        # browser driver
-        self.browser_driver_label = ttk.Label(self.configuration_set_frame, text="驱动地址:",font=self.font)
-        self.browser_driver_label.grid(row=1, column=1, padx=5, pady=10, sticky=tk.W)
-        self.browser_driver_entry = ctk.CTkEntry(self.configuration_set_frame)
-        self.browser_driver_entry.grid(row=1, column=2, padx=5, pady=10, sticky=tk.W)
-        self.open_file_button = ctk.CTkButton(self.configuration_set_frame, text="选择文件",
-                                              fg_color=self.button_color, command=self.select_file,
-                                              hover_color=self.button_hover_color)
-        self.open_file_button.grid(row=2, column=2, sticky=tk.W)
-        #界面设置
-        self.frame_set_frame= ttk. LabelFrame(self.set_frame, text="界面设置：")
-        self.frame_set_frame.grid(row=1, column=0,  sticky='nsew', padx=5, pady=5)
-        #字体设置
-        self.frame_font=["Helvetica",'微软雅黑','宋体','楷体','隶书','黑体','仿宋','幼圆','方正舒体','方正姚体','华文彩云','华文琥珀','华文隶书',
-                         '华文行楷','华文仿宋','方正新宋体','方正小标宋','楷体_GB2312','仿宋_GB2312','华文中宋','华文新魏','方正仿宋']
-        self.font_label = ttk.Label(self.frame_set_frame, text="字体设置：",font=self.font)
-        self.font_label.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
-        self.font_entry = ctk.CTkComboBox(self.frame_set_frame, values= self.frame_font,font=self.font,
-                                          button_color=self.button_color, button_hover_color=self.button_hover_color,
-                                          dropdown_fg_color=self.frame_fg_color,state = 'readonly',
-                                          dropdown_hover_color=self.button_color,
-                                          )
-        self.font_entry.grid(row=1, column=2, padx=5, pady=5, sticky=tk.W)
-        # 大小设置
-        self.size=['9','10','11','12','13','14','15','16']
-        self.size_label = ttk.Label(self.frame_set_frame, text="大小设置：",font=self.font)
-        self.size_label.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
-        self.size_entry = ctk.CTkComboBox(self.frame_set_frame, values=self.size, font=self.font,state = 'readonly',
-                                          button_color=self.button_color, button_hover_color=self.button_hover_color,
-                                            dropdown_fg_color = self.frame_fg_color,
-                                            dropdown_hover_color = self.button_color)
-        self.size_entry.grid(row=2, column=2, padx=5, pady=5, sticky=tk.W)
-        # 窗口置顶勾选框
-        self.topmost_label=ttk.Label(self.frame_set_frame, text="窗口置顶：", font=self.font)
-        self.topmost_label.grid(row=3, column=1, padx=5, pady=5, sticky=tk.W+tk.N)
+        # ========== 设置页面（改用CTkFrame模拟分组） ==========
+        # 配置设置组
+        self.style = ttk.Style()
+        self.style.configure('TLabelframe', background=self.frame_fg_color, borderwidth=10)
+        self.style.configure('TLabelframe.Label', background=self.frame_fg_color, font=self.font)
+        self.style.configure('TLabel', background=self.frame_fg_color)
+        self.configuration_set_frame = ctk.CTkFrame(self.set_frame, corner_radius=12, border_width=1,
+                                                    fg_color='transparent',
+                                                    border_color="#CBD5E1")
+        self.configuration_set_frame.grid(row=0, column=0, sticky="nsew", padx=6, pady=6)
+        lbl_cfg = ctk.CTkLabel(self.configuration_set_frame, text="⚙ 配置设置", font=("Microsoft YaHei", 13, "bold"))
+        lbl_cfg.grid(row=0, column=0, columnspan=3, sticky="w", padx=12, pady=(8, 4))
 
-        self.topmost_check = ctk.CTkSwitch(self.frame_set_frame, text="",bg_color=self.frame_fg_color,
-                                            command=self.toggle_topmost,font=self.font)
-        self.topmost_check.grid(row=3,column=2,sticky=tk.W+tk.N)
-        self.topmost_check.select()
-        #信息设置
-        self.message_set_frame = ttk .LabelFrame(self.set_frame, text="信息设置：")
-        self.message_set_frame.grid(row=2,  column=0, columnspan=2, sticky='nsew', padx=5, pady=5)
-        # 账户：输入框
-        self.phone_number_label = ttk.Label(self.message_set_frame, text="账号:", font=self.font)
-        self.phone_number_label.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
-        self.phone_number_entry = ctk.CTkEntry(self.message_set_frame, font=self.font,)
-        self.phone_number_entry.grid(row=1, column=2, padx=5, pady=5, sticky=tk.W)
-        # 密码:输入框
-        self.password_label = ttk.Label(self.message_set_frame, text="密码:",font=self.font)
-        self.password_label.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
-        self.password_entry = ctk.CTkEntry(self.message_set_frame, font=self.font,show='*')
-        self.password_entry.grid(row=2, column=2, padx=5, pady=5, sticky=tk.W)
-        self.show_password_button = ctk.CTkButton(self.message_set_frame, text="",fg_color='transparent',image=self.show_image,
-                                                 command=self.show_password,font=self.font,width=10,height=10)
-        self.show_password_button.grid(row=2, column=3,  pady=5, sticky=tk.W)
-        # 输入框：课程
-        self.cour_label = ttk.Label(self.message_set_frame, text="课程名称:", font=self.font)
-        self.cour_label.grid(row=3, column=1, padx=5, pady=5, sticky=tk.W)
-        self.cour_entry = ctk.CTkComboBox(self.message_set_frame, font=self.font,values=[],
-                                          button_color=self.button_color, button_hover_color=self.button_hover_color,
-                                          dropdown_fg_color=self.frame_fg_color,
-                                          dropdown_hover_color=self.button_color,
-                                          )
-        self.cour_entry['state'] = 'normal'
-        self.cour_entry.grid(row=3, column=2, padx=5, pady=5, sticky=tk.W)
-        #功能设置
-        self.function_set_frame = ttk.LabelFrame(self.set_frame, text="功能设置：")
-        self.function_set_frame.grid(row=0, column=1,rowspan=2, sticky='nsew', padx=5, pady=5)
-        self.radio_var = tk.IntVar(value=1)
-        #功能单选项
-        self.radio_button_1 = ctk.CTkRadioButton(master=self.function_set_frame, variable=self.radio_var,
-                                                           value=1,text="自动刷课答题",command=self.function_choice)
-        self.radio_button_1.grid(row=1, column=1,columnspan=2, pady=10, padx=5, sticky="w")
-        self.radio_button_2 = ctk.CTkRadioButton(master=self.function_set_frame, variable=self.radio_var,
-                                                           value=2,text="自动完成作业",command=self.function_choice)
-        self.radio_button_2.grid(row=2, column=1, pady=10,columnspan=2, padx=5, sticky="w")
-        self.radio_button_3 = ctk.CTkRadioButton(master=self.function_set_frame, variable=self.radio_var,
-                                                           value=3,text="自动完成考试",command=self.function_choice)
-        self.radio_button_3.grid(row=3, column=1, pady=10,columnspan=2, padx=5, sticky="w")
-        # 刷题：输入框
-        self.vido_question_label = ttk.Label(self.function_set_frame, text="视频题目:", font=self.font)
-        self.vido_question_options = ["DeepSeek AI", '随机答题']
-        self.vido_question_entry = ctk.CTkComboBox(self.function_set_frame, values=self.vido_question_options, font=self.font,
-                                              button_color=self.button_color, state='readonly',
-                                              command=lambda _:self.shua_ti_choice('视频题目'),
-                                              button_hover_color=self.button_hover_color,
-                                              dropdown_fg_color=self.frame_fg_color,
-                                              dropdown_hover_color=self.button_color,
-                                              )
-        self.vido_question_entry.set('随机答题')
-        self.question_label = ttk.Label(self.function_set_frame, text="章节测验:", font=self.font)
-        self.question_options = [ "DeepSeek AI",'随机答题',"不刷题"]
-        self.question_entry = ctk.CTkComboBox(self.function_set_frame, values=self.question_options, font=self.font,
-                                              button_color=self.button_color,state = 'readonly',command=self.shua_ti_choice,
-                                              button_hover_color=self.button_hover_color,
-                                              dropdown_fg_color=self.frame_fg_color,
-                                              dropdown_hover_color=self.button_color,
-                                              )
-        # self.question_entry.configure(state = 'readonly')
-        #倍速设置：复选框
-        self.speed = ['1', '2', '3', '4', '5', '6','8','10','16']
-        self.speed_label = ttk.Label(self.function_set_frame, text="倍速设置：", font=self.font)
-        self.speed_entry = ctk.CTkComboBox(self.function_set_frame, values=self.speed, font=self.font,command=self.hint,
-                                           button_color=self.button_color, button_hover_color=self.button_hover_color,
-                                           dropdown_fg_color=self.frame_fg_color,
+        ctk.CTkLabel(self.configuration_set_frame, text="浏览器:", font=self.font).grid(row=1, column=0, padx=6,
+                                                                                        pady=4, sticky="w")
+        self.browser_entry = ctk.CTkComboBox(
+            self.configuration_set_frame, values=['不指定浏览器', 'edge', 'chrome'],
+            state='readonly', font=self.font, corner_radius=6, dropdown_fg_color=self.frame_fg_color,
+                                           dropdown_hover_color=self.button_color,command=self.auto_fill_browser_driver,
+            button_color=self.button_color, button_hover_color=self.button_hover_color
+        )
+        self.browser_entry.grid(row=1, column=1, padx=6, pady=4, sticky="w")
+
+        ctk.CTkLabel(self.configuration_set_frame, text="驱动地址:", font=self.font).grid(row=2, column=0, padx=6,
+                                                                                          pady=4, sticky="w")
+        self.browser_driver_entry = ctk.CTkEntry(self.configuration_set_frame, corner_radius=6, width=140)
+        self.browser_driver_entry.grid(row=2, column=1, padx=6, pady=4, sticky="w")
+        self.open_file_button = ctk.CTkButton(
+            self.configuration_set_frame, text="选择文件", width=120,
+            fg_color=self.button_color, hover_color=self.button_hover_color, corner_radius=6,
+            command=self.select_file
+        )
+        self.open_file_button.grid(row=3, column=1, padx=6, pady=4, sticky="w")
+
+        # 界面设置组
+        self.frame_set_frame = ctk.CTkFrame(self.set_frame, corner_radius=12, border_width=1, fg_color='transparent',
+                                            border_color="#CBD5E1")
+        self.frame_set_frame.grid(row=1, column=0, sticky="nsew", padx=6, pady=6)
+        lbl_ui = ctk.CTkLabel(self.frame_set_frame, text="🎨 界面设置", font=("Microsoft YaHei", 13, "bold"))
+        lbl_ui.grid(row=0, column=0, columnspan=3, sticky="w", padx=6, pady=(8, 4))
+
+        ctk.CTkLabel(self.frame_set_frame, text="字体设置:", font=self.font).grid(row=1, column=0, padx=6, pady=4,
+                                                                              sticky="w")
+        self.font_entry = ctk.CTkComboBox(
+            self.frame_set_frame, values=["Helvetica", "Microsoft YaHei",'微软雅黑', '宋体', '楷体', '黑体'],dropdown_fg_color=self.frame_fg_color,
                                            dropdown_hover_color=self.button_color,
-                                           )
-        self.speed_entry.configure(state = 'readonly')
-        #API
-        self.API_label = ttk.Label(self.function_set_frame, text="API:", font=self.font)
-        self.API_entry = ctk.CTkEntry(self.function_set_frame, font=self.font, show='*')
-        self.show_api_button = ctk.CTkButton(self.function_set_frame, text="",fg_color='transparent',image=self.show_image,
-                                                 command=self.show_api,font=self.font,width=10,height=10)
-        # 跳过人脸
-        self.pass_face_label = ttk.Label(self.function_set_frame, text="跳过人脸：", font=self.font)
-        self.pass_face_check = ctk.CTkSwitch(self.function_set_frame, text="", bg_color=self.frame_fg_color,command=self.pass_face_message,
-                                               font=self.font)
-        #防锁屏
-        self.lock_screen_label = ttk.Label(self.function_set_frame, text="防锁屏：", font=self.font)
-        self.lock_screen_check = ctk.CTkSwitch(self.function_set_frame, text="", bg_color=self.frame_fg_color,
-                                            font=self.font)
-        # 选择作业
-        self.homework_label = ttk.Label(self.function_set_frame, text="选择作业:", font=self.font)
-        self.homework_entry = ctk.CTkComboBox(self.function_set_frame, font=self.font, values=['手动选择', '自动选择'],
-                                              button_color=self.button_color,
-                                              button_hover_color=self.button_hover_color,
-                                              dropdown_fg_color=self.frame_fg_color, command=self.prompt,
-                                              dropdown_hover_color=self.button_color,
-                                              )
-        self.homework_entry.configure(state = 'readonly')
-        self.combobox_lst=[ self.change_theme,self.speed_entry,self.question_entry,self.cour_entry,self.size_entry,self.homework_entry,
-                            self.font_entry, self.browser_entry,self.course_score_entry,self.course_vido_entry,self.vido_question_entry]
+            state='readonly', font=self.font, corner_radius=6,
+            button_color=self.button_color, button_hover_color=self.button_hover_color
+        )
+        self.font_entry.grid(row=1, column=1, padx=6, pady=4, sticky="w")
 
-        # 创建保存按钮
-        self.save_button = ctk.CTkButton(self.set_frame, text="保存", command=self.save,
-                                         font=self.font,fg_color=self.button_color,
-                                         hover_color=self.button_hover_color)
-        self.save_button.grid(row=3, columnspan=2 ,padx=10, pady=10)
+        ctk.CTkLabel(self.frame_set_frame, text="大小设置:", font=self.font).grid(row=2, column=0, padx=6, pady=4,
+                                                                              sticky="w")
+        self.size_entry = ctk.CTkComboBox(
+            self.frame_set_frame, values=['9', '10', '11', '12', '13', '14', '15', '16'], dropdown_fg_color=self.frame_fg_color,
+                                           dropdown_hover_color=self.button_color,
+            state='readonly', font=self.font, corner_radius=6,
+            button_color=self.button_color, button_hover_color=self.button_hover_color
+        )
+        self.size_entry.grid(row=2, column=1, padx=6, pady=4, sticky="w")
+
+        ctk.CTkLabel(self.frame_set_frame, text="窗口置顶:", font=self.font).grid(row=3, column=0, padx=12, pady=4,
+                                                                                  sticky="w")
+        self.topmost_check = ctk.CTkSwitch(self.frame_set_frame, text="", command=self.toggle_topmost)
+        self.topmost_check.grid(row=3, column=1, padx=6, pady=4, sticky="w")
+        self.topmost_check.select()
+
+        # 信息设置组
+        self.message_set_frame = ctk.CTkFrame(self.set_frame, corner_radius=12, border_width=1, fg_color='transparent',
+                                              border_color="#CBD5E1")
+        self.message_set_frame.grid(row=2, column=0, sticky="nsew", padx=6, pady=6)
+        lbl_info = ctk.CTkLabel(self.message_set_frame, text="🔐 账号信息", font=("Microsoft YaHei", 13, "bold"))
+        lbl_info.grid(row=0, column=0, columnspan=3, sticky="w", padx=6, pady=(8, 4))
+
+        ctk.CTkLabel(self.message_set_frame, text="账号:", font=self.font).grid(row=1, column=0, padx=6, pady=4,
+                                                                                sticky="w")
+        self.phone_number_entry = ctk.CTkEntry(self.message_set_frame, corner_radius=6, width=140)
+        self.phone_number_entry.grid(row=1, column=1, padx=6, pady=4, sticky="w")
+
+        ctk.CTkLabel(self.message_set_frame, text="密码:", font=self.font).grid(row=2, column=0, padx=6, pady=4,
+                                                                                sticky="w")
+        self.password_entry = ctk.CTkEntry(self.message_set_frame, show='*', corner_radius=6, width=140,)
+        self.password_entry.grid(row=2, column=1, padx=(6,0), pady=4, sticky="w")
+        self.show_password_button = ctk.CTkButton(self.message_set_frame, text="", fg_color='transparent',
+                                                  image=self.show_image,
+                                                  command=self.show_password, font=self.font, width=5, height=10)
+        self.show_password_button.grid(row=2, column=2,padx=0, pady=4, sticky=tk.E)
+        ctk.CTkLabel(self.message_set_frame, text="课程名称:", font=self.font).grid(row=3, column=0, padx=6, pady=4,
+                                                                                    sticky="w")
+        self.cour_entry = ctk.CTkComboBox(
+            self.message_set_frame, values=[], state='normal',dropdown_fg_color=self.frame_fg_color,
+                                           dropdown_hover_color=self.button_color,
+            font=self.font, corner_radius=6, button_color=self.button_color
+        )
+        self.cour_entry.grid(row=3, column=1, padx=6, pady=4, sticky="w")
+        self.next_row = 4
+        self.add_course_button = ctk.CTkButton(self.message_set_frame, text="", fg_color='transparent',
+                                                  image=self.add_image,
+                                                  command=lambda: self.add_course(''), width=5, height=5)
+        self.add_course_button.grid(row=3, column=2, padx=1, pady=4, sticky=tk.E)
+        ToolTip(self.add_course_button, "添加课程")
+
+        # 功能设置组（右侧大区域）
+        self.function_set_frame = ctk.CTkFrame(self.set_frame, corner_radius=12, border_width=1, fg_color='transparent',
+                                               border_color="#CBD5E1")
+        self.function_set_frame.grid(row=0, column=1, sticky="nsew", padx=6, pady=6)
+        lbl_func = ctk.CTkLabel(self.function_set_frame, text="🚀 功能设置", font=("Microsoft YaHei", 13, "bold"))
+        lbl_func.grid(row=0, column=0, columnspan=2, sticky="w", padx=6, pady=(8, 4))
+
+        self.radio_var = tk.IntVar(value=1)
+        self.radio_button_1 = ctk.CTkRadioButton(
+            self.function_set_frame, text="自动刷课答题", variable=self.radio_var, value=1,
+            command=self.function_choice, font=self.font
+        )
+        self.radio_button_2 = ctk.CTkRadioButton(
+            self.function_set_frame, text="自动完成作业", variable=self.radio_var, value=2,
+            command=self.function_choice, font=self.font
+        )
+        self.radio_button_3 = ctk.CTkRadioButton(
+            self.function_set_frame, text="自动完成考试", variable=self.radio_var, value=3,
+            command=self.function_choice, font=self.font
+        )
+        self.radio_button_1.grid(row=1, column=1, columnspan=3, padx=12, pady=6, sticky="w")
+        self.radio_button_2.grid(row=2, column=1, columnspan=3, padx=12, pady=6, sticky="w")
+        self.radio_button_3.grid(row=3, column=1, columnspan=3, padx=12, pady=6, sticky="w")
+
+        # 高级设置组（右侧大区域）
+        self.detail_set_frame = ctk.CTkFrame(self.set_frame, corner_radius=12, border_width=1, fg_color='transparent',
+                                             border_color="#CBD5E1")
+        self.detail_set_frame.grid(row=1, column=1, rowspan=2, sticky="nsew", padx=6, pady=6)
+        lbl_func = ctk.CTkLabel(self.detail_set_frame, text="🔧 高级设置", font=("Microsoft YaHei", 13, "bold"))
+        lbl_func.grid(row=0, column=0, columnspan=2, sticky="w", padx=6, pady=(8, 4))
+        # 后续控件动态添加，保持原有变量名
+        self.question_label = ctk.CTkLabel(self.detail_set_frame, text="章节测验:", font=self.font)
+        self.question_entry = ctk.CTkComboBox(
+            self.detail_set_frame, values=["DeepSeek AI", '随机答题', "不刷题"],dropdown_fg_color=self.frame_fg_color,
+                                           dropdown_hover_color=self.button_color,
+            font=self.font, corner_radius=6, state='readonly',
+            button_color=self.button_color, command=self.shua_ti_choice
+        )
+        self.vido_question_label = ctk.CTkLabel(self.detail_set_frame, text="视频题目:", font=self.font)
+        self.vido_question_entry = ctk.CTkComboBox(
+            self.detail_set_frame, values=["DeepSeek AI", '随机答题'],dropdown_fg_color=self.frame_fg_color,
+                                           dropdown_hover_color=self.button_color,
+            font=self.font, corner_radius=6, state='readonly',
+            button_color=self.button_color, command=lambda _: self.shua_ti_choice('视频题目')
+        )
+        self.discussion_label = ctk.CTkLabel(self.detail_set_frame, text="讨论:", font=self.font)
+        self.discussion_entry = ctk.CTkComboBox(
+            self.detail_set_frame, values=["DeepSeek AI", '跳过讨论'],dropdown_fg_color=self.frame_fg_color,
+                                           dropdown_hover_color=self.button_color,
+            font=self.font, corner_radius=6, state='readonly',
+            button_color=self.button_color, command=lambda _: self.shua_ti_choice('讨论')
+        )
+        self.speed_label = ctk.CTkLabel(self.detail_set_frame, text="倍速设置:", font=self.font)
+        self.speed_entry = ctk.CTkComboBox(
+            self.detail_set_frame, values=['1', '2', '3', '4', '5', '6', '8', '10', '16'],dropdown_fg_color=self.frame_fg_color,
+                                           dropdown_hover_color=self.button_color,
+            font=self.font, corner_radius=6, state='readonly', command=self.hint,
+            button_color=self.button_color
+        )
+        self.API_label = ctk.CTkLabel(self.detail_set_frame, text="API Key:", font=self.font)
+        self.API_entry = ctk.CTkEntry(self.detail_set_frame, show='*', corner_radius=6)
+        ToolTip(self.API_entry, "可通过赞助作者获取或者前往deepseek官网购买")
+        self.show_api_button = ctk.CTkButton(self.detail_set_frame, text="", fg_color='transparent',
+                                             image=self.show_image,
+                                             command=self.show_api, font=self.font, width=5, height=10)
+        self.pass_face_label = ctk.CTkLabel(self.detail_set_frame, text="跳过人脸:", font=self.font)
+        self.pass_face_check = ctk.CTkSwitch(self.detail_set_frame, text="")
+        ToolTip(self.pass_face_check, "只有当你的课程需要人脸认证时才开启")
+        self.lock_screen_label = ctk.CTkLabel(self.detail_set_frame, text="防锁屏:", font=self.font)
+        self.lock_screen_check = ctk.CTkSwitch(self.detail_set_frame, text="")
+        self.homework_label = ctk.CTkLabel(self.detail_set_frame, text="选择作业:", font=self.font)
+        self.homework_entry = ctk.CTkComboBox(
+            self.detail_set_frame, values=['手动选择', '自动选择'],dropdown_fg_color=self.frame_fg_color,
+                                           dropdown_hover_color=self.button_color,
+            state='readonly', font=self.font, corner_radius=6, command=self.prompt,
+            button_color=self.button_color
+        )
+        # 保存按钮
+        self.save_button = ctk.CTkButton(
+            self.set_frame, text="💾 保存设置", command=self.save,
+            font=("Microsoft YaHei", 13, "bold"), height=40, corner_radius=20,
+            fg_color=self.button_color,
+            hover_color=self.button_hover_color)
+        self.save_button.grid(row=3, column=0, columnspan=2, pady=20, padx=12)
+
         #设置网格权重
         self.set_frame.rowconfigure(3,weight=1)
         self.frame_set_frame.rowconfigure(3,weight=1)
+        self.combobox_lst = [
+            self.change_theme, self.speed_entry, self.question_entry, self.cour_entry,
+            self.size_entry, self.homework_entry, self.font_entry, self.browser_entry,
+            self.course_score_entry, self.course_vido_entry, self.vido_question_entry,
+            self.discussion_entry
+        ]
+        self.check_switch=[self.topmost_check,self.pass_face_check,self.lock_screen_check]
         self.button_name_list1=[self.start_button, self.close_button, self.update_button, self.save_button,
                                 self.open_file_button, self.find_button1, self.find_button2,self.delete_button1,self.delete_button2]
 
@@ -422,8 +493,8 @@ class Start:
         self.error_text.grid(pady=20)
 
         #----------------赞助页面----------------
-        self.label1 = ctk.CTkLabel(self.money_frame, text="如果对您有帮助，欢迎给我打赏,各位的支持就是我更新的最大动力\n"
-                                                          "邮箱地址：2022865286@qq.com",
+        self.label1 = ctk.CTkLabel(self.money_frame, text="如果对您有帮助，欢迎给我打赏\n各位的支持就是我更新的最大动力\n"
+                                                          "邮箱地址：2022865286@qq.com\n(获取API的赞助完后一定要发送邮箱告知作者)",
                                    font=self.font,fg_color='transparent')
         self.label1.grid(row=0, column=0, columnspan=2, padx=10, pady=10, sticky=tk.W)
         # 加载图片
@@ -439,15 +510,60 @@ class Start:
         self.load_data()
         self.show_main()
         self.function_choice()
+
         if self.user_notice=='True':
             # 在初始化完成后显示用户须知弹窗
             self.show_user_notice()
         else:
             self.check_update()
 
-    def pass_face_message(self):
-        if self.pass_face_check.get()==1:
-            tk.messagebox.showinfo('提示','只有当你的课程需要人脸认证时才开启')
+    def add_course(self, cour_name):
+        """添加课程"""
+        row = self.next_row
+        self.next_row += 1
+        if row>=6:
+            tk.messagebox.showwarning('警告', '最多只能添加3门课程')
+            self.next_row -=1
+            return
+        cour_entry = ctk.CTkComboBox(
+            self.message_set_frame, values=self.data, state='normal', dropdown_fg_color=self.frame_fg_color,
+            dropdown_hover_color=self.button_color,
+            font=self.font, corner_radius=6, button_color=self.button_color
+        )
+        cour_entry.set(cour_name)
+        cour_entry.grid(row=row, column=1, padx=6, pady=4, sticky="w")
+        # 删除按钮（可选，便于移除该行）
+        del_btn = ctk.CTkButton(
+            self.message_set_frame, text="✖", width=20,
+            fg_color="#F87171", hover_color="#EF4444",
+                command=lambda: self.delete_course_row(cour_entry, del_btn, row)
+        )
+        del_btn.grid(row=row, column=2, padx=2, pady=4, sticky=tk.W)
+        # 为这个删除按钮创建独立的 ToolTip 实例
+        tip = ToolTip(del_btn, "删除该课程")
+        self.dynamic_rows.append((cour_entry, del_btn, row, tip))
+        # 当添加到第三门课程（row=5）时，禁用上一门课程的删除按钮并修改提示
+        if row == 5 and len(self.dynamic_rows) >= 2:
+            prev_entry, prev_del_btn, prev_row, prev_tip = self.dynamic_rows[-2]
+            prev_del_btn.configure(state='disabled')
+            prev_tip.set_text("请先删除最后一个课程")
+
+    def delete_course_row(self, entry, del_btn, row):
+        """删除指定的动态行"""
+        entry.destroy()
+        del_btn.destroy()
+        # 从列表中移除（根据 entry 识别）
+        for i, (e, d, r, tip) in enumerate(self.dynamic_rows):
+            if e == entry:
+                self.dynamic_rows.pop(i)
+                break
+        self.next_row -= 1
+        # 删除后，如果 next_row 回到 5（即删除了第三门，只剩两门），恢复第二门删除按钮的可用状态及提示
+        if self.next_row == 5 and len(self.dynamic_rows) >= 1:
+            # 找到当前最后一门（原第二门）的删除按钮和提示
+            last_entry, last_del_btn, last_row, last_tip = self.dynamic_rows[-1]
+            last_del_btn.configure(state='normal')
+            last_tip.set_text("删除该课程")
 
     def delete_record(self, file_name):
         #验证文件是否存在
@@ -598,20 +714,22 @@ class Start:
 
     def function_choice(self):
         if self.radio_var.get()==1 :
-            self.question_label.grid(row=4, column=1, padx=5, pady=5, sticky=tk.W)
-            self.question_entry.grid(row=4, column=2, padx=5, pady=5, sticky=tk.W)
-            self.vido_question_label.grid(row=5, column=1, padx=5, pady=5, sticky=tk.W)
-            self.vido_question_entry.grid(row=5, column=2, padx=5, pady=5, sticky=tk.W)
+            self.question_label.grid(row=4, column=1, padx=5, pady=10, sticky=tk.W)
+            self.question_entry.grid(row=4, column=2, padx=5, pady=10, sticky=tk.W)
+            self.vido_question_label.grid(row=5, column=1, padx=5, pady=10, sticky=tk.W)
+            self.vido_question_entry.grid(row=5, column=2, padx=5, pady=10, sticky=tk.W)
+            self.discussion_label.grid(row=6, column=1, padx=5, pady=10, sticky=tk.W)
+            self.discussion_entry.grid(row=6, column=2, padx=5, pady=10, sticky=tk.W)
             self.question_entry.configure(values=['DeepSeek AI','随机答题','不刷题'])
-            if self.question_entry.get()=='DeepSeek AI' or self.vido_question_entry.get()=='DeepSeek AI':
-                self.API_label.grid(row=6, column=1, padx=5, pady=5, sticky=tk.W)
-                self.API_entry.grid(row=6, column=2, padx=5, pady=5, sticky=tk.W)
-                self.show_api_button.grid(row=6, column=3, pady=5, sticky=tk.W)
-            self.speed_label.grid(row=8, column=1, padx=5, pady=5, sticky=tk.W)
-            self.speed_entry.grid(row=8, column=2, padx=5, pady=5, sticky=tk.W)
-            self.pass_face_label.grid(row=9, column=1, padx=5, pady=5, sticky=tk.W)
+            if self.question_entry.get()=='DeepSeek AI' or self.vido_question_entry.get()=='DeepSeek AI' or self.discussion_entry.get()=='DeepSeek AI':
+                self.API_label.grid(row=7, column=1, padx=5, pady=10, sticky=tk.W)
+                self.API_entry.grid(row=7, column=2, padx=5, pady=10, sticky=tk.W)
+                self.show_api_button.grid(row=7, column=3, pady=10, sticky=tk.W)
+            self.speed_label.grid(row=8, column=1, padx=5, pady=10, sticky=tk.W)
+            self.speed_entry.grid(row=8, column=2, padx=5, pady=10, sticky=tk.W)
+            self.pass_face_label.grid(row=9, column=1, padx=5, pady=10, sticky=tk.W)
             self.pass_face_check.grid(row=9, column=2, sticky=tk.W)
-            self.lock_screen_label.grid(row=10, column=1, padx=5, pady=5, sticky=tk.W)
+            self.lock_screen_label.grid(row=10, column=1, padx=5, pady=10, sticky=tk.W)
             self.lock_screen_check.grid(row=10, column=2, sticky=tk.W)
             self.homework_label.grid_forget()
             self.homework_entry.grid_forget()
@@ -619,39 +737,41 @@ class Start:
         elif self.radio_var.get()==2:
             if self.user_notice == 'True':
                 self.homework_entry.set('')
-            self.question_label.grid(row=4, column=1, padx=5, pady=5, sticky=tk.W)
-            self.question_entry.grid(row=4, column=2, padx=5, pady=5, sticky=tk.W)
+            self.question_label.grid(row=4, column=1, padx=5, pady=10, sticky=tk.W)
+            self.question_entry.grid(row=4, column=2, padx=5, pady=10, sticky=tk.W)
             self.question_entry.set('DeepSeek AI')
             self.question_entry.configure(values=['DeepSeek AI'])
-            self.API_label.grid(row=6, column=1, padx=5, pady=5, sticky=tk.W)
-            self.API_entry.grid(row=6, column=2, padx=5, pady=5, sticky=tk.W)
-            self.show_api_button.grid(row=6, column=3, pady=5, sticky=tk.W)
-            self.homework_label.grid(row=7, column=1, padx=5, pady=5, sticky=tk.W)
-            self.homework_entry.grid(row=7, column=2, padx=5, pady=5, sticky=tk.W)
+            self.API_label.grid(row=7, column=1, padx=5, pady=10, sticky=tk.W)
+            self.API_entry.grid(row=7, column=2, padx=5, pady=10, sticky=tk.W)
+            self.show_api_button.grid(row=7, column=3, pady=10, sticky=tk.W)
+            self.homework_label.grid(row=8, column=1, padx=5, pady=10, sticky=tk.W)
+            self.homework_entry.grid(row=8, column=2, padx=5, pady=10, sticky=tk.W)
             self.speed_label.grid_forget()
             self.speed_entry.grid_forget()
             self.lock_screen_label.grid_forget()
             self.lock_screen_check.grid_forget()
             self.vido_question_label.grid_forget()
             self.vido_question_entry.grid_forget()
+            self.discussion_label.grid_forget()
+            self.discussion_entry.grid_forget()
         else:
             tk.messagebox.showinfo('提示', '该功能还在开发中...,敬请期待')
             self.radio_var.set(1)
             self.function_choice()
 
     def shua_ti_choice(self, event):
-        if self.question_entry.get() == '随机答题' and event != '视频题目':
+        if self.question_entry.get() == '随机答题' and event != '视频题目' and event!='讨论':
             tk.messagebox.showinfo('提示',
                                    '请谨慎选择，只有在章节测验不计入总成绩的情况下才能使用，否则因此挂科了请自行承担后果！！！')
-        if self.vido_question_entry.get()=='DeepSeek AI' or self.question_entry.get()=='DeepSeek AI':
+        if self.vido_question_entry.get()=='DeepSeek AI' or self.question_entry.get()=='DeepSeek AI' or self.discussion_entry.get()=='DeepSeek AI':
             if self.vido_question_entry.get()=='DeepSeek AI' and event=='视频题目':
                 tk.messagebox.showinfo('提示','这个是用于完成视频中弹出的题目，'
                                               '只有在选错答案会回退视频的情况下才建议使用DeepSeek AI，一般情况请使用随机答题,没有任何影响')
-            self.API_label.grid(row=6, column=1, padx=5, pady=5, sticky=tk.W)
-            self.API_entry.grid(row=6, column=2, padx=5, pady=5, sticky=tk.W)
-            self.show_api_button.grid(row=6, column=3,  pady=5, sticky=tk.W)
+            self.API_label.grid(row=7, column=1, padx=5, pady=5, sticky=tk.W)
+            self.API_entry.grid(row=7, column=2, padx=5, pady=5, sticky=tk.W)
+            self.show_api_button.grid(row=7, column=3,  pady=5, sticky=tk.W)
         else:
-            if self.vido_question_entry!='DeepSeek AI' and self.question_entry!='DeepSeek AI':
+            if self.vido_question_entry!='DeepSeek AI' and self.question_entry!='DeepSeek AI' and self.discussion_entry!='DeepSeek AI':
                 self.API_label.grid_forget()
                 self.API_entry.grid_forget()
                 self.show_api_button.grid_forget()
@@ -893,9 +1013,6 @@ class Start:
 
                         # 创建网盘选择弹窗
                         self.show_cloud_drive_selection()
-                        # self.text_box.insert(tk.END, '夸克网盘：https://pan.quark.cn/s/eba634db1544\n'
-                        #                              '或迅雷网盘链接:https://pan.xunlei.com/s/VO_FdZ-t7lDMpGFgLcuH81DTA1?pwd=viah#\n'
-                        #                      '或百度网盘链接: https://pan.baidu.com/s/1xEoGATUZPk6u3rQYvWnrlQ?pwd=1234 提取码: 1234')
         except Exception as e:
             self.text_box.insert(tk.END, '\n检查更新失败，请检查网络连接！')
             logger.error(f'检查更新失败：{e}')
@@ -1104,7 +1221,7 @@ class Start:
         self.root.after(1000, self.update_time)  # 每秒更新一次
 
     def change_font(self):
-        self.font = (self.font_entry.get(), self.size_entry.get())
+        self.font = (self.font_entry.get(), int(self.size_entry.get()))
         self.style.configure('TLabelframe.Label',font=self.font)
 
         def update_font(widget):
@@ -1120,8 +1237,6 @@ class Start:
         update_font(self.root)
 
     def save_course(self):
-        content =self.cour_entry.get().replace(r'\n', '')
-        if content:
             data = []
             try:
                 with open(r'task/tool/course_name.json', 'r') as f:
@@ -1129,11 +1244,12 @@ class Start:
                     data=dit.get(self.phone_number_entry.get(),[])
             except FileNotFoundError:
                 pass
-            if content not in data:
-                data.append(content)
-                with open(r'task/tool/course_name.json', 'w' , encoding='utf-8')as f:
-                    dit[self.phone_number_entry.get()]=data
-                    json.dump(dit, f)
+            for content in self.all_courses:
+                if content not in data:
+                    data.append(content)
+            with open(r'task/tool/course_name.json', 'w' , encoding='utf-8')as f:
+                dit[self.phone_number_entry.get()]=data
+                json.dump(dit, f)
 
     def save(self):
         try:
@@ -1172,18 +1288,31 @@ class Start:
             tk.messagebox.showerror('警告', message='请填写课程名称')
             return False
         else:
-            self.account_info['cour'] = self.cour_entry.get().replace('\n', '')
+            courses=[self.cour_entry.get().replace('\n', '')]
+            add_courses = [entry.get() for entry, _, _,_ in self.dynamic_rows if entry.get().replace('\n', '')]
+            self.all_courses = courses+add_courses
+            self.account_info['cour'] = self.all_courses
         if self.question_entry.get() ==''  :
             tk.messagebox.showerror('警告', message='请完成章节测验刷题设置')
             return False
         else:
             self.account_info['choice'] = self.question_entry.get()
-
-        if self.question_entry.get() == 'DeepSeek AI' and self.API_entry.get()=='':
-            tk.messagebox.showerror('警告', message='请填写API密钥')
+        if self.vido_question_entry.get() =='' and self.radio_var.get()==1 :
+            tk.messagebox.showerror('警告', message='请完成视频题目设置')
             return False
         else:
-            self.account_info['API'] = self.API_entry.get()
+            self.account_info['video_title_choice'] = self.vido_question_entry.get()
+        if self.discussion_entry.get() ==''  and self.radio_var.get()==1:
+            tk.messagebox.showerror('警告', message='请完成讨论设置')
+            return False
+        else:
+            self.account_info['discussion_choice'] = self.discussion_entry.get()
+        if self.question_entry.get() == 'DeepSeek AI' or self.vido_question_entry.get() == 'DeepSeek AI' or self.discussion_entry.get() == 'DeepSeek AI':
+            if self.API_entry.get()=='':
+                tk.messagebox.showerror('警告', message='请填写API密钥')
+                return False
+            else:
+                self.account_info['API'] = self.API_entry.get()
         if self.speed_entry.get()==''and self.radio_var.get()==1:
             tk.messagebox.showerror('警告', message='请填写倍数')
             return False
@@ -1226,14 +1355,14 @@ class Start:
                 self.account_info = json.load(fil)
                 with open(r'task/tool/course_name.json', 'r') as f:
                     dit = json.load(f)
-                    data=dit.get(self.account_info['phone_number'],[])
-                    if data:
-                        self.course_score_entry.configure(values= tuple(data))
-                        self.course_vido_entry.configure(values= tuple(data))
-                        self.cour_entry.configure(values=tuple(data))
+                    self.data=dit.get(self.account_info['phone_number'],[])
+                    if self.data:
+                        self.course_score_entry.configure(values= tuple(self.data))
+                        self.course_vido_entry.configure(values= tuple(self.data))
+                        self.cour_entry.configure(values=tuple(self.data))
                 self.user_notice=self.account_info['user_notice']
-                self.course_score_entry.set( self.account_info['cour'])
-                self.course_vido_entry.set( self.account_info['cour'])
+                self.course_score_entry.set( self.account_info['cour'][0])
+                self.course_vido_entry.set( self.account_info['cour'][0])
                 self.browser_entry.set( self.account_info['browser'])
                 if self.account_info['browser']!='不指定浏览器':
                     self.browser_driver_entry.insert(0, self.account_info['driver_path'])
@@ -1243,10 +1372,11 @@ class Start:
                 self.speed_entry.set( self.account_info['speed'])
                 self.phone_number_entry.insert( 0,self.account_info['phone_number'])
                 self.password_entry.insert(0, self.account_info['password'])
-                self.cour_entry.set( self.account_info['cour'])
+                self.cour_entry.set( self.account_info['cour'][0])
                 self.question_entry.set( self.account_info['choice'])
                 if self.account_info['video_title_choice']!='':
                     self.vido_question_entry.set( self.account_info['video_title_choice'])
+                self.discussion_entry.set( self.account_info['discussion_choice'])
                 self.homework_entry.set( self.account_info['homework'])
                 self.radio_var.set(self.account_info['radio_var'])
                 if self.account_info['pass_face']==0:
@@ -1264,6 +1394,8 @@ class Start:
                     self.change_font()
                 except:
                     pass
+                for cour_name in self.account_info['cour'][1:]:
+                    self.add_course(cour_name)
         except FileNotFoundError:
             pass
 
@@ -1276,13 +1408,17 @@ class Start:
         self.navigation_frame.grid(row=0, column=0, rowspan=2,sticky="nsew")
 
     def change_appearance_mode_event(self, theme):
+        colors = self.color_value_dict.get(theme, ['#1E88E5', '#F8FAFC', '#90CAF9'])
+
         self.record_color_lst.append(theme)
         for frame in self.frame_name_list:
             frame.configure(fg_color=self.color_value_dict.get(theme)[1])
+        self.navigation_frame.configure(fg_color=self.color_value_dict.get(theme)[2])
         self.style.configure('TLabelframe', background=self.color_value_dict.get(theme)[1])
         self.style.configure('TLabelframe.Label', background=self.color_value_dict.get(theme)[1])
         self.style.configure('TLabel',background=self.color_value_dict.get(theme)[1])
-        self.topmost_check.configure(bg_color=self.color_value_dict.get(theme)[1],progress_color=self.color_value_dict.get(theme)[0])
+        for check in self.check_switch:
+            check.configure(bg_color=colors[1], progress_color=colors[0])
         for button in self.button_name_list1:
             button.configure(fg_color=self.color_value_dict.get(theme)[0],hover_color=self.color_value_dict.get(theme)[2])
         for combox in self.combobox_lst:

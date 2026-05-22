@@ -4,7 +4,7 @@
 # For more information, see the LICENSE file in the root directory of this project.
 import time
 from selenium.webdriver.common.by import By
-from task.common import Common
+from task.tool.common import Common
 class Audio(Common):
     def __init__(self,driver,iframe_element):
         super().__init__(driver,iframe_element,'音频')

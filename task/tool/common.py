@@ -46,7 +46,7 @@ class Common:
             if self.check_audio_finished():
                 continue
             # 滚动到
-            self.driver.execute_script("arguments[0].scrollIntoView();", self.iframe)
+            self.driver.execute_script("arguments[0].scrollIntoView();", self.iframe.find_element(By.XPATH, "preceding-sibling::div[1]"))
             print(color.green(f'开始第{num + 1}个{self.type}'), flush=True)
             self.start()
             print(color.green(f'第{num + 1}个{self.type}已完成'), flush=True)

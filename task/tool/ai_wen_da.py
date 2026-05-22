@@ -10,7 +10,7 @@ import pickle
 import os
 import asyncio
 import ast
-from task.DeepSeekAsk import DeepSeekAsk
+from task.tool.DeepSeekAsk import DeepSeekAsk
 
 
 @dataclass

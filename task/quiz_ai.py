@@ -14,8 +14,8 @@ from task.tool.no_secret import DecodeSecret
 from task.tool import color
 import sys
 import io
-from task.ai_wen_da import main,AnswerAPI,Question
-from task.DeepSeekAsk import DeepSeekAsk
+from task.tool.ai_wen_da import main,AnswerAPI,Question
+from task.tool.DeepSeekAsk import DeepSeekAsk
 from task.tool.send_wx import send_error
 
 # 设置默认编码为UTF-8
@@ -173,6 +173,9 @@ class Answer:
             for no_answer_title in self.no_answer_dit.values():
                 title += no_answer_title
             answers = DeepSeekAsk(self.API_KEY, title, 'all')
+            if not answers:
+                print(color.red('deepseek搜题失败'), flush=True)
+                return
             # answers='C/B/ABCD/ABCD/实体经济/'
             parts = re.split(r'/', answers)
             for key, no_answer_title in self.no_answer_dit.items():

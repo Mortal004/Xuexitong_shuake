@@ -1,5 +1,5 @@
 
-from task.common import Common
+from task.tool.common import Common
 from task.do_work import turn_page
 
 class Live(Common):

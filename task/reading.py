@@ -5,7 +5,7 @@
 import time
 
 from selenium.webdriver.common.by import By
-from task.common import Common
+from task.tool.common import Common
 from task.do_work import turn_page
 
 class Reading(Common):

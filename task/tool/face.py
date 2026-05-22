@@ -28,11 +28,11 @@ def get_cookie(driver,file_name='cookies',course_name=''):
     try:
         pickle.dump(driver.get_cookies(), open(rf'task/tool/{file_name}.pkl', 'wb'))
         if file_name=='face_cookies':
-            with open(rf'task/tool/account_info.json', 'r', encoding='utf-8') as f:
+            with open(rf'task/tool/face_url.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 data[course_name] = driver.current_url
                 # print(data['face_url'], flush=True)
-                json.dump(data, open(rf'task/tool/account_info.json', 'w', encoding='utf-8'))
+                json.dump(data, open(rf'task/tool/face_url.json', 'w', encoding='utf-8'))
         return True
     except PermissionError:
         print(color.red('请在关闭该窗口后，再右键点击刷课程序用管理员权限打开'))

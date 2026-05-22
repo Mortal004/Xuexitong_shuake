@@ -6,10 +6,11 @@ import json
 import random
 from selenium.common import  NoAlertPresentException
 import time
+import ast
 
 from selenium.webdriver.common.action_chains import ActionChains
 
-from task.DeepSeekAsk import DeepSeekAsk
+from task.tool.DeepSeekAsk import DeepSeekAsk
 from task.tool import color
 import pyautogui
 from selenium.webdriver.common.by import By
@@ -100,10 +101,11 @@ def check_video_question(driver,API,video_title_choice):
         submit = element.find_element(By.ID, 'videoquiz-submit')
         if video_title_choice=='DeepSeek AI':
             answer = get_answer(API,question_title+'\n'+str(options_txt),question_type)
-            # answer=['A']
-            # print(answer, flush=True)
             if type(answer) is str:
-                answer = eval(answer)
+                try:
+                    answer = ast.literal_eval(answer)  # 转换为列表
+                except:
+                    answer = [answer]
             if not answer:
                 print(color.red(f'❌ 答题失败'), flush=True)
                 return
@@ -131,22 +133,24 @@ def check_video_question(driver,API,video_title_choice):
                         submit.click()
             except:
                 pass
-        try:
-            return_video=driver.find_element(By.CSS_SELECTOR, '[class="bntWhiteBorder ans-videoquiz-back fr"]')
-            return_video.click()
-        except:
-            pass
+
         #继续学习
         try:
             continue_learn=element.find_element(By.ID,'videoquiz-continue')
             continue_learn.click()
         except :
             pass
-    except :
+        try:
+            return_video=driver.find_element(By.CSS_SELECTOR, '[class="bntWhiteBorder ans-videoquiz-back fr"]')
+            return_video.click()
+        except:
+            pass
+    except:
         return
 
-def check_vido_play(driver,last_time,current_time):
-    global b,pause_start_time
+
+def check_vido_play(driver, last_time, current_time):
+    global b, pause_start_time
     with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as f:
         account_info = json.load(f)
         speed = account_info['speed']
