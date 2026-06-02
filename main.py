@@ -43,16 +43,28 @@ def login_study(driver,phone_number,password):
     无。
     """
     # 打开网页
-    driver.get("https:i.chaoxing.com/")
+      driver.get("https:i.chaoxing.com/")
     turn_page(driver,'用户登录')
+    # 尝试 cookie.pkl 自动登录（宿主 profile 或手动导入均可）
+    if auto_login_with_cookies(driver):
+        if get_cookie(driver):
+            print(color.green('Cookie 登录成功'), flush=True)
+        return
+    # 已登录状态（页面无登录框）
+    try:
+        driver.find_element(By.ID, 'phone')
+    except:
+        print(color.green('检测到已登录状态，跳过登录步骤'), flush=True)
+        if get_cookie(driver):
+            print(color.green('登录成功'), flush=True)
+        return
+    # 输账密登录
     print(color.green('正在登录中...'), flush=True)
-    # 自动登录
     element = driver.find_element(By.ID, 'phone')
     time.sleep(1)
     element1 = driver.find_element(By.ID, 'pwd')
-    element.send_keys(phone_number)  # 替换成你的手机号码
-    element1.send_keys(password)  # 替换成你的密码
-    # 点击登录
+    element.send_keys(phone_number)
+    element1.send_keys(password)
     login_button = driver.find_element(By.ID, 'loginBtn')
     try:
         login_button.click()
