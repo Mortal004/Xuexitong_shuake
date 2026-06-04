@@ -43,7 +43,7 @@ def login_study(driver,phone_number,password):
     无。
     """
     # 打开网页
-      driver.get("https:i.chaoxing.com/")
+    driver.get("https://i.chaoxing.com/")
     turn_page(driver,'用户登录')
     # 尝试 cookie.pkl 自动登录（宿主 profile 或手动导入均可）
     if auto_login_with_cookies(driver):
