@@ -22,6 +22,7 @@ from task.tool.face import check_face,get_cookie,auto_login_with_cookies
 from task.finish_dicussion import finish_discussion
 from task.play_audio import play_audio
 from task.tool import color
+from task.watch_live import watch_live
 from task.watch_ppt import __ppt
 from task.watch_vido import study_page
 from task.quiz_ai import  finish_quiz
@@ -73,11 +74,17 @@ def login_study(driver,phone_number,password):
 def save_course_lst(driver,class_name,course_elements,phone_number):
     try:
         have_task_course_element=driver.find_element(By.ID,'stuNormalCourseListDiv')
-        new_course_elements=have_task_course_element.find_elements(By.CLASS_NAME,class_name)
+    except:
+        have_task_course_element=driver
+    try:
+        new_course_elements=have_task_course_element.find_elements(By.CSS_SELECTOR, f'[class="{class_name}"]')
         if len(course_elements)==0:
             new_course_elements=course_elements
         course_list = [course_element.get_attribute('title') for course_element in new_course_elements if
                        course_element.get_attribute('title')!= '']
+        if len(course_list)==0:
+            course_list=[course_element.text for course_element in new_course_elements if
+                       course_element.text!= '']
         if len(course_list) == 0:
             print(color.red(f'获取课程列表失败'), flush=True)
         else:
@@ -159,7 +166,7 @@ def choice_course(driver, course_name,speed,task_type,phone_number):
             class_name = "courseName"
         if len(course_elements) == 0:
             # turn_page(driver, '个人空间')
-            driver.switch_to.frame('frame_content')
+            # driver.switch_to.frame('frame_content')
             course_elements = driver.find_elements(By.CSS_SELECTOR, '[class="w_cour_txtH fl"]')
             class_name="w_cour_txtH fl"
         save_course_lst(driver,class_name,course_elements,phone_number)
@@ -189,6 +196,8 @@ def choice_course(driver, course_name,speed,task_type,phone_number):
                 driver.find_element(By.XPATH,'//*[@id="stukc"]/div[1]/div[1]/div/div/ul/li[1]').click()
             choice_course(driver,course_name,speed,task_type,phone_number)
     except :
+        #继续教育
+
         print(color.red(f"未找到《{course_name}》这门课程，请检查名称是否正确，或手动选择你要刷课的课程，打开该课程后等待片刻"),
               flush=True)
         now_window_handles=len(driver.window_handles)
@@ -327,17 +336,17 @@ def click_next_page(driver, pass_face):
     except ElementNotInteractableException:
         print(color.red('🎉 🎉 该课程全部已完结，撒花！！！'), flush=True)
         return False
-    except ElementClickInterceptedException:
-        print(color.red('点击被拦截，尝试将浏览器最大化,如果还是报错，请在下次打开浏览器后手动把浏览器最大化'), flush=True)
-        driver.maximize_window()
-        time.sleep(2)
-        driver.find_element(By.XPATH, NEXT_PAGE_XPATH).click()
+    # except ElementClickInterceptedException:
+    #     print(color.red('点击被拦截，尝试将浏览器最大化,如果还是报错，请在下次打开浏览器后手动把浏览器最大化'), flush=True)
+    #     driver.maximize_window()
+    #     time.sleep(2)
+    #     driver.find_element(By.XPATH, NEXT_PAGE_XPATH).click()
     except NoSuchElementException:
         print(color.red('加载中...'), flush=True)
         driver.implicitly_wait(5)
         error_num+=1
         if error_num==6:
-            print(color.red('出错次数过多'), flush=True)
+            print(color.red('❌ 出错次数过多'), flush=True)
             return False
         try:
             driver.find_element(By.XPATH, NEXT_PAGE_XPATH).click()
@@ -352,7 +361,7 @@ def click_next_page(driver, pass_face):
             driver.implicitly_wait(2)
     return True
 
-def run(driver,choice,course_name,API,lock_screen,pass_face,video_title_choice,discussion_choice):
+def run(driver,choice,course_name,API,lock_screen,pass_face,video_title_choice,discussion_choice,after_finish_question):
     while True:
         cond=True
         print(color.green('正在检测页面内容'), flush=True)
@@ -364,8 +373,9 @@ def run(driver,choice,course_name,API,lock_screen,pass_face,video_title_choice,d
             if 'ppt' in page_message_dict.keys():
                 __ppt(driver)
             if '直播' in page_message_dict.keys():
-                print(color.yellow('刷直播的功能还在开发中，请各位提供一下账号，加快开发，我这边无法模拟直播页面，发送至邮箱2022865286@qq.com'
-                                   '感谢支持，采纳的账号将赠送免费API'),flush=True)
+                # print(color.yellow('刷直播的功能还在开发中，请各位提供一下账号，加快开发，我这边无法模拟直播页面，发送至邮箱2022865286@qq.com'
+                #                    '感谢支持，采纳的账号将赠送免费API'),flush=True)
+                watch_live(driver)
             if '音频' in page_message_dict.keys():
                 play_audio(driver,page_message_dict['音频'])
             if '讨论' in page_message_dict.keys():
@@ -373,11 +383,7 @@ def run(driver,choice,course_name,API,lock_screen,pass_face,video_title_choice,d
                     finish_discussion(driver,API,page_message_dict['讨论'],discussion_choice)
                 else:
                     print(color.yellow(f'您已选择{discussion_choice}'), flush=True)
-            if '测验' in page_message_dict.keys():
-                if choice!='不刷题':
-                    finish_quiz(driver, course_name, API, choice)
-                else:
-                    print(color.yellow('您已选择不刷题，即将跳过测试题'),flush=True)
+
             if '阅读' in page_message_dict.keys():
                 reading(driver,page_message_dict['阅读'])
             if '视频' in page_message_dict.keys():
@@ -387,6 +393,11 @@ def run(driver,choice,course_name,API,lock_screen,pass_face,video_title_choice,d
                     driver.refresh()
                     print(color.red('出错了，刷新一下'),flush=True)
                     cond=False
+            if '测验' in page_message_dict.keys():
+                if choice!='不刷题':
+                    finish_quiz(driver, course_name, API, choice,after_finish_question)
+                else:
+                    print(color.yellow('您已选择不刷题，即将跳过测试题'),flush=True)
         driver.switch_to.default_content()
         if cond:
             print(color.green('跳转下一页'), flush=True)
@@ -444,7 +455,7 @@ def delete_face_popup(driver,class_name='maskDiv1 chapterVideoFaceQrMaskDiv'):
     except Exception as e:
         pass
 
-def main(browser, driver_path, phone_number, password, choice, course_lst,API,
+def main(browser, driver_path, phone_number, password, choice, course_lst,API,after_finish_question,
          lock_screen,speed, task_type,homework,pass_face,video_title_choice,discussion_choice):
     driver = start_browser(browser, driver_path,speed)
     login_study(driver, phone_number, password)
@@ -464,11 +475,12 @@ def main(browser, driver_path, phone_number, password, choice, course_lst,API,
                 return
             turn_page(driver, '学生学习页面')
             fold(driver)
+            pyautogui.hotkey('ctrl', 'm')
             if pass_face==1:
                 print(color.green('删除人脸中，请耐心等待...'), flush=True)
                 delete_face_popup(driver)
                 delete_face_popup(driver,'maskDiv1 starttippop faceRecognition_1 chapterVideoFaceMaskDiv')
-            run(driver, choice, course_name, API, lock_screen,pass_face,video_title_choice,discussion_choice)
+            run(driver, choice, course_name, API, lock_screen,pass_face,video_title_choice,discussion_choice,after_finish_question)
         driver.close()
         turn_page(driver, '个人空间')
 
@@ -535,7 +547,7 @@ def parse_versions_from_text(error_text):
         browser_main_ver = int(versions['browser_version'].split('.')[0])
 
         if browser_main_ver > driver_ver:
-            print(f"❌ 版本不兼容: {versions['browser_type']}浏览器版本(v{browser_main_ver})过高，"
+            print(f"版本不兼容: {versions['browser_type']}浏览器版本(v{browser_main_ver})过高，"
                   f"但驱动仅支持到v{driver_ver}")
             print(f"📋 解决方案:")
             print(f"  1. 下载{versions['browser_type']}Driver {browser_main_ver}的版本")
@@ -562,7 +574,7 @@ def run_main():
         with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as fil:
             account_info = json.load(fil)
         main(account_info['browser'], account_info['driver_path'], account_info['phone_number'], account_info['password'],account_info['choice'],
-            account_info['cour'],account_info['API'],account_info['lock_screen'],account_info['speed'],account_info['task_type'],
+            account_info['cour'],account_info['API'],account_info['after_finish_question'],account_info['lock_screen'],account_info['speed'],account_info['task_type'],
              account_info['homework'],account_info['pass_face'],account_info['video_title_choice'],account_info['discussion_choice'])
     except NoSuchWindowException as e:
         print(color.red('❌ 窗口意外关闭'),flush=True)

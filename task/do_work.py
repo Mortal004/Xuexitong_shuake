@@ -15,7 +15,7 @@ def turn_page(driver,page_name):
 
 class do_work(Answer):
     def __init__(self,driver,course_name,homework,API_KEY):
-        Answer.__init__(self,driver,test_frame=None,course_name=course_name,api=API_KEY,work_choice=None)
+        Answer.__init__(self,driver,test_frame=None,course_name=course_name,api=API_KEY,work_choice=None,after_finish_question='仅自动保存')
 
         self.homework = homework
         self.driver = driver
@@ -115,8 +115,12 @@ class do_work(Answer):
         for title_num in self.num_answer_dit.keys():
             self.finish_title(title_num)
             time.sleep(0.5)
-        self.save_elements = self.driver.find_element(By.ID, 'submitFocus').find_elements(By.TAG_NAME, 'a')
-        print(color.red('暂时保存，AI答题不一定完全正确，请自行确认后再提交'), flush=True)
+        try:
+            self.save_elements = self.driver.find_element(By.ID, 'submitFocus').find_elements(By.TAG_NAME, 'a')
+            print(color.red('暂时保存，AI答题不一定完全正确，请自行确认后再提交'), flush=True)
+        except:
+            print(color.red('保存失败，请手动保存，15秒后继续'), flush=True)
+            time.sleep(15)
         for save_element in self.save_elements:
             if save_element.text == '暂时保存':
                 save_element.click()

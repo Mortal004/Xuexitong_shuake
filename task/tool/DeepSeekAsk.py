@@ -1,3 +1,6 @@
+import random
+import re
+
 from task.tool import color
 from openai import OpenAI
 
@@ -48,16 +51,17 @@ def DeepSeekAsk(API_KEY, title ,_type):
         message = {"role": "user", "content": prompt}
         client = OpenAI(api_key=API_KEY, base_url="https://api.deepseek.com")
         response = client.chat.completions.create(
-            model="deepseek-chat",
+            model=random.choice(['deepseek-v4-flash','deepseek-v4-pro']),
             messages=[message],
             temperature=1.3,
             stream=False
         )
         answer = response.choices[0].message.content
-        print(answer)
     else:
         print(color.red('请输入正确的deepseek API_KEY'), flush=True)
-        return []
+        return '[]'
+    match = re.search(r'\[(.*?)\]', answer)
+    if match:
+        answer = match.group(0)
+    print(answer, flush=True)
     return answer
-
-

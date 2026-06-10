@@ -65,6 +65,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 class Start:
     def __init__(self):
+        self.timer_active = False
+        self.timer_end_time = '03:00:00'
+        self.timer_start_time = '04:00:00'
         self.dynamic_rows = []
         self.process = None
         self.colorama_to_tkinter = {
@@ -93,7 +96,7 @@ class Start:
         self.root.geometry("+1050+20")  # 设置窗口大小
         with open(r'task/tool/version_info','r',encoding='utf-8') as f:
             version_info=f.read()
-            self.root.title(f'学习通刷课  {version_info}')
+            self.root.title(f'学习通刷课 {version_info}')
         # 初始设定窗口置顶
         self.is_topmost = True
         self.root.wm_attributes("-topmost", self.is_topmost)
@@ -147,7 +150,7 @@ class Start:
                                          hover_color=self.button_color,
                                          anchor="e", command=self.fold_frame)
         self.fold_button.grid(row=9, column=0, sticky="new")
-        self.button_text_list = ["主页","设置","帮助","刷课日志   ","测试成绩","题库查询","报错日志","赞助作者"]
+        self.button_text_list = ["主页","设置","帮助","刷课日志","测试成绩","题库查询","报错日志","赞助作者"]
         self.button_command_list = [self.show_main, self.show_set, self.show_help, lambda:self.show_record('刷课'), lambda:self.show_record('成绩'), self.show_question_bank, self.show_error, self.show_money]
         self.button_name_list = ['home_button','set_button','help_button','vido_button','score_button','question_bank_button','error_button','money_button',self.open_button,self.fold_button]
         for i in range(len(self.button_text_list)):
@@ -185,10 +188,16 @@ class Start:
         self.start_button = ctk.CTkButton(self.main_frame, text="▶ 开始刷课",height=40, border_spacing=10,fg_color=self.button_color,
                                           command=self.start, font=self.font,hover_color=self.button_hover_color)
         self.start_button.grid(row=0, column=0,padx=5, pady=10)
+        # 定时刷课按钮
+        self.timer_button = ctk.CTkButton(self.main_frame, text="⏰ 定时刷课", height=40, border_spacing=10,
+                                          fg_color=self.button_color,
+                                          command=self.open_timer_window, font=self.font,
+                                          hover_color=self.button_hover_color)
+        self.timer_button.grid(row=0, column=1, padx=5, pady=10)
         # 关闭程序按钮
         self.close_button = ctk.CTkButton(self.main_frame, text="■ 结束刷课",height=40, border_spacing=10,fg_color=self.button_color, hover_color=self.button_hover_color,
                                           command=self.close,font=self.font)
-        self.close_button.grid(row=0, column=1,padx=5,  pady=10)
+        # self.close_button.grid(row=0, column=1,padx=5,  pady=10)
         #更新
         self.update_button = ctk.CTkButton(self.main_frame, text="↻ 检查更新",height=40, border_spacing=10,fg_color=self.button_color,
                                            command=self.check_update,font=self.font,hover_color=self.button_hover_color)
@@ -197,7 +206,7 @@ class Start:
         self.text_box = ctk.CTkTextbox(self.main_frame,
                                        fg_color='transparent',
                                        height=24 * 20,  # CTkTextbox 使用像素单位
-                                       width=20 * 10,  # 需要根据字符宽度估算
+                                       width=40 * 10,  # 需要根据字符宽度估算
                                        font=self.font)
         self.text_box.insert(tk.INSERT, 'WELCOME TO 学习通刷课 ！！！\n请先进入设置页面填写信息！！！')
 
@@ -405,6 +414,7 @@ class Start:
         self.radio_button_3.grid(row=3, column=1, columnspan=3, padx=12, pady=6, sticky="w")
 
         # 高级设置组（右侧大区域）
+        self.pady=7
         self.detail_set_frame = ctk.CTkFrame(self.set_frame, corner_radius=12, border_width=1, fg_color='transparent',
                                              border_color="#CBD5E1")
         self.detail_set_frame.grid(row=1, column=1, rowspan=2, sticky="nsew", padx=6, pady=6)
@@ -418,6 +428,14 @@ class Start:
             font=self.font, corner_radius=6, state='readonly',
             button_color=self.button_color, command=self.shua_ti_choice
         )
+        #答完题后
+        self.after_finish_question=ctk.CTkLabel(self.detail_set_frame, text="答完题后:", font=self.font)
+        self.after_finish_question_entry = ctk.CTkComboBox(self.detail_set_frame, values=["仅自动保存", '强制自动提交',
+        '搜到60%的题自动提交','搜到70%的题自动提交','搜到80%的题自动提交','搜到90%的题自动提交',  '搜到100%的题自动提交'], dropdown_fg_color=self.frame_fg_color,
+                                                           dropdown_hover_color=self.button_color,
+                                                           font=self.font, corner_radius=6, state='readonly',
+                                                           button_color=self.button_color
+                                                           )
         self.vido_question_label = ctk.CTkLabel(self.detail_set_frame, text="视频题目:", font=self.font)
         self.vido_question_entry = ctk.CTkComboBox(
             self.detail_set_frame, values=["DeepSeek AI", '随机答题'],dropdown_fg_color=self.frame_fg_color,
@@ -472,10 +490,10 @@ class Start:
             self.change_theme, self.speed_entry, self.question_entry, self.cour_entry,
             self.size_entry, self.homework_entry, self.font_entry, self.browser_entry,
             self.course_score_entry, self.course_vido_entry, self.vido_question_entry,
-            self.discussion_entry
+            self.discussion_entry,self.after_finish_question_entry
         ]
         self.check_switch=[self.topmost_check,self.pass_face_check,self.lock_screen_check]
-        self.button_name_list1=[self.start_button, self.close_button, self.update_button, self.save_button,
+        self.button_name_list1=[self.start_button,self.timer_button, self.close_button, self.update_button, self.save_button,
                                 self.open_file_button, self.find_button1, self.find_button2,self.delete_button1,self.delete_button2]
 
         #----------------帮助页面----------------
@@ -506,17 +524,22 @@ class Start:
         self.label.grid(row=1, column=0, columnspan=2, padx=10, pady=10, sticky=tk.W+tk.E)
 
         # 更新时间显示
+        self.process_condition=False
         self.update_time()
         self.load_data()
         self.show_main()
         self.function_choice()
-
         if self.user_notice=='True':
             # 在初始化完成后显示用户须知弹窗
             self.show_user_notice()
         else:
             self.check_update()
-
+        if self.timer_active:
+            self.text_box.configure(state=tk.NORMAL)
+            self.text_box.insert(tk.END,
+                                 f"\n定时刷课已开启:\n  开始时间: {self.timer_start_time}\n  "
+                                 f"结束时间: {self.timer_end_time}\n"
+                                 f"请勿关闭此窗口，否则定时刷课将无法正常开启")
     def add_course(self, cour_name):
         """添加课程"""
         row = self.next_row
@@ -714,38 +737,49 @@ class Start:
 
     def function_choice(self):
         if self.radio_var.get()==1 :
-            self.question_label.grid(row=4, column=1, padx=5, pady=10, sticky=tk.W)
-            self.question_entry.grid(row=4, column=2, padx=5, pady=10, sticky=tk.W)
-            self.vido_question_label.grid(row=5, column=1, padx=5, pady=10, sticky=tk.W)
-            self.vido_question_entry.grid(row=5, column=2, padx=5, pady=10, sticky=tk.W)
-            self.discussion_label.grid(row=6, column=1, padx=5, pady=10, sticky=tk.W)
-            self.discussion_entry.grid(row=6, column=2, padx=5, pady=10, sticky=tk.W)
+            self.question_label.configure(text='章节测验')
+            self.question_label.grid(row=4, column=1, padx=5, pady=self.pady, sticky=tk.W)
+            self.question_entry.grid(row=4, column=2, padx=5, pady=self.pady, sticky=tk.W)
+            if self.question_entry.get()=='DeepSeek AI':
+                self.after_finish_question.grid(row=5, column=1, padx=5, pady=self.pady, sticky=tk.W)
+                self.after_finish_question_entry.grid(row=5, column=2, padx=5, pady=self.pady, sticky=tk.W)
+            self.after_finish_question_entry.configure(values=["仅自动保存", '强制自动提交',
+        '搜到60%的题自动提交','搜到70%的题自动提交','搜到80%的题自动提交','搜到90%的题自动提交',  '搜到100%的题自动提交'])
+            self.vido_question_label.grid(row=6, column=1, padx=5, pady=self.pady, sticky=tk.W)
+            self.vido_question_entry.grid(row=6, column=2, padx=5, pady=self.pady, sticky=tk.W)
+            self.discussion_label.grid(row=7, column=1, padx=5, pady=self.pady, sticky=tk.W)
+            self.discussion_entry.grid(row=7, column=2, padx=5, pady=self.pady, sticky=tk.W)
             self.question_entry.configure(values=['DeepSeek AI','随机答题','不刷题'])
             if self.question_entry.get()=='DeepSeek AI' or self.vido_question_entry.get()=='DeepSeek AI' or self.discussion_entry.get()=='DeepSeek AI':
-                self.API_label.grid(row=7, column=1, padx=5, pady=10, sticky=tk.W)
-                self.API_entry.grid(row=7, column=2, padx=5, pady=10, sticky=tk.W)
-                self.show_api_button.grid(row=7, column=3, pady=10, sticky=tk.W)
-            self.speed_label.grid(row=8, column=1, padx=5, pady=10, sticky=tk.W)
-            self.speed_entry.grid(row=8, column=2, padx=5, pady=10, sticky=tk.W)
-            self.pass_face_label.grid(row=9, column=1, padx=5, pady=10, sticky=tk.W)
-            self.pass_face_check.grid(row=9, column=2, sticky=tk.W)
-            self.lock_screen_label.grid(row=10, column=1, padx=5, pady=10, sticky=tk.W)
-            self.lock_screen_check.grid(row=10, column=2, sticky=tk.W)
+                self.API_label.grid(row=8, column=1, padx=5, pady=self.pady, sticky=tk.W)
+                self.API_entry.grid(row=8, column=2, padx=5, pady=self.pady, sticky=tk.W)
+                self.show_api_button.grid(row=8, column=3, pady=self.pady, sticky=tk.W)
+            self.speed_label.grid(row=9, column=1, padx=5, pady=self.pady, sticky=tk.W)
+            self.speed_entry.grid(row=9, column=2, padx=5, pady=self.pady, sticky=tk.W)
+            self.pass_face_label.grid(row=10, column=1, padx=5, pady=self.pady, sticky=tk.W)
+            self.pass_face_check.grid(row=10, column=2, sticky=tk.W)
+            self.lock_screen_label.grid(row=11, column=1, padx=5, pady=self.pady, sticky=tk.W)
+            self.lock_screen_check.grid(row=11, column=2, sticky=tk.W)
             self.homework_label.grid_forget()
             self.homework_entry.grid_forget()
 
         elif self.radio_var.get()==2:
             if self.user_notice == 'True':
                 self.homework_entry.set('')
-            self.question_label.grid(row=4, column=1, padx=5, pady=10, sticky=tk.W)
-            self.question_entry.grid(row=4, column=2, padx=5, pady=10, sticky=tk.W)
+            self.question_label.configure(text='作业答题')
+            self.question_label.grid(row=4, column=1, padx=5, pady=self.pady, sticky=tk.W)
+            self.question_entry.grid(row=4, column=2, padx=5, pady=self.pady, sticky=tk.W)
             self.question_entry.set('DeepSeek AI')
             self.question_entry.configure(values=['DeepSeek AI'])
-            self.API_label.grid(row=7, column=1, padx=5, pady=10, sticky=tk.W)
-            self.API_entry.grid(row=7, column=2, padx=5, pady=10, sticky=tk.W)
-            self.show_api_button.grid(row=7, column=3, pady=10, sticky=tk.W)
-            self.homework_label.grid(row=8, column=1, padx=5, pady=10, sticky=tk.W)
-            self.homework_entry.grid(row=8, column=2, padx=5, pady=10, sticky=tk.W)
+            self.after_finish_question.grid(row=5, column=1, padx=5, pady=self.pady, sticky=tk.W)
+            self.after_finish_question_entry.grid(row=5, column=2, padx=5, pady=self.pady, sticky=tk.W)
+            self.after_finish_question_entry.set('仅自动保存')
+            self.after_finish_question_entry.configure(values=['仅自动保存'])
+            self.API_label.grid(row=7, column=1, padx=5, pady=self.pady, sticky=tk.W)
+            self.API_entry.grid(row=7, column=2, padx=5, pady=self.pady, sticky=tk.W)
+            self.show_api_button.grid(row=7, column=3, pady=self.pady, sticky=tk.W)
+            self.homework_label.grid(row=9, column=1, padx=5, pady=self.pady, sticky=tk.W)
+            self.homework_entry.grid(row=9, column=2, padx=5, pady=self.pady, sticky=tk.W)
             self.speed_label.grid_forget()
             self.speed_entry.grid_forget()
             self.lock_screen_label.grid_forget()
@@ -763,13 +797,19 @@ class Start:
         if self.question_entry.get() == '随机答题' and event != '视频题目' and event!='讨论':
             tk.messagebox.showinfo('提示',
                                    '请谨慎选择，只有在章节测验不计入总成绩的情况下才能使用，否则因此挂科了请自行承担后果！！！')
+        if self.question_entry.get()!='DeepSeek AI':
+            self.after_finish_question.grid_forget()
+            self.after_finish_question_entry.grid_forget()
+        else:
+            self.after_finish_question.grid(row=5, column=1, padx=5, pady=self.pady, sticky=tk.W)
+            self.after_finish_question_entry.grid(row=5, column=2, padx=5, pady=self.pady, sticky=tk.W)
         if self.vido_question_entry.get()=='DeepSeek AI' or self.question_entry.get()=='DeepSeek AI' or self.discussion_entry.get()=='DeepSeek AI':
             if self.vido_question_entry.get()=='DeepSeek AI' and event=='视频题目':
                 tk.messagebox.showinfo('提示','这个是用于完成视频中弹出的题目，'
                                               '只有在选错答案会回退视频的情况下才建议使用DeepSeek AI，一般情况请使用随机答题,没有任何影响')
-            self.API_label.grid(row=7, column=1, padx=5, pady=5, sticky=tk.W)
-            self.API_entry.grid(row=7, column=2, padx=5, pady=5, sticky=tk.W)
-            self.show_api_button.grid(row=7, column=3,  pady=5, sticky=tk.W)
+            self.API_label.grid(row=8, column=1, padx=5, pady=5, sticky=tk.W)
+            self.API_entry.grid(row=8, column=2, padx=5, pady=5, sticky=tk.W)
+            self.show_api_button.grid(row=8, column=3,  pady=5, sticky=tk.W)
         else:
             if self.vido_question_entry!='DeepSeek AI' and self.question_entry!='DeepSeek AI' and self.discussion_entry!='DeepSeek AI':
                 self.API_label.grid_forget()
@@ -1114,7 +1154,6 @@ class Start:
 
     def run_program(self,file_name):
         self.fold_frame()
-        self.start_button.configure(state=tk.DISABLED)
         """
         运行 main.py 程序，并将其输出实时显示在 GUI 的文本框中。
         """
@@ -1142,7 +1181,6 @@ class Start:
                         decoded_output = output.decode()
                     except UnicodeDecodeError:
                         decoded_output = output.decode('gbk', errors='ignore')
-
                     # 处理 [91m 这种颜色标记
                     ansi_color_start = re.search(r'\[(\d+?)m', decoded_output)
                     ansi_color_end = re.search(r'\[0m', decoded_output)
@@ -1175,6 +1213,8 @@ class Start:
                     decoded_output=re.sub(r'[\n\t\r]', '', decoded_output)
                     if decoded_output.strip():
                         logger.info(decoded_output)
+                    if '❌' in decoded_output:
+                        self.close()
                     self.text_box.see(tk.END)  # 自动滚动到文本框底部，以显示最新内容
             self.process.stdout.close()
             try:
@@ -1187,7 +1227,11 @@ class Start:
         self.thread = threading.Thread(target=read_output)
         self.thread.start()
 
+
     def start(self):
+        self.process_condition=True
+        self.close_button.grid(row=0, column=0, padx=5, pady=10)
+        self.start_button.grid_forget()
         with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as fil:
             self.account_info = json.load(fil)
             if self.account_info['phone_number'] == '':
@@ -1198,7 +1242,92 @@ class Start:
         threading.Thread(target=self.run_program,args=(file_name,)).start()
         threading.Thread(target=self.start_button_normal).start()
 
+    def open_timer_window(self):
+        """打开定时刷课设置窗口"""
+        timer_window = ctk.CTkToplevel(self.root)
+        timer_window.title("⏰ 定时刷课设置")
+        timer_window.geometry("350x200")
+        timer_window.resizable(False, False)
+        timer_window.transient(self.root)
+        timer_window.grab_set()
+        # 开始时间设置
+        ctk.CTkLabel(timer_window, text="开始时间 (HH:MM:SS):", font=self.font).grid(row=0, column=0, padx=10, pady=10,
+                                                                                     sticky="w")
+        self.start_time_entry = ctk.CTkEntry(timer_window, width=120, font=self.font)
+        self.start_time_entry.grid(row=0, column=1, padx=10, pady=10)
+        self.start_time_entry.insert(0, self.timer_start_time)
+        # 结束时间设置
+        ctk.CTkLabel(timer_window, text="结束时间 (HH:MM:SS):", font=self.font).grid(row=1, column=0, padx=10, pady=10,
+                                                                                     sticky="w")
+        self.end_time_entry = ctk.CTkEntry(timer_window, width=120, font=self.font)
+        self.end_time_entry.grid(row=1, column=1, padx=10, pady=10)
+        self.end_time_entry.insert(0, self.timer_end_time)
+        # 确认按钮
+        confirm_btn = ctk.CTkButton(timer_window, text="开启定时", fg_color=self.button_color,
+                                    hover_color=self.button_hover_color, font=self.font,
+                                    command=lambda: self.set_timer(timer_window))
+        confirm_btn.grid(row=2, column=0,  padx=10, pady=20)
+        #取消定时
+        cancel_btn = ctk.CTkButton(timer_window, text="禁用定时", fg_color=self.button_color,hover_color=self.button_hover_color,font=self.font,
+                                    command=lambda: self.close_timer_window(timer_window))
+        cancel_btn.grid(row=2, column=1, padx=10, pady=20)
+
+    def set_timer(self, window):
+        """设置定时刷课时间"""
+        start_time_str = self.start_time_entry.get().strip()
+        end_time_str = self.end_time_entry.get().strip()
+        # 验证时间格式
+        time_pattern = r"^([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$"
+        if not re.match(time_pattern, start_time_str):
+            tk.messagebox.showerror("错误", "开始时间格式不正确，请输入 HH:MM:SS 格式")
+            return
+        if not re.match(time_pattern, end_time_str):
+            tk.messagebox.showerror("错误", "结束时间格式不正确，请输入 HH:MM:SS 格式")
+            return
+        # 验证结束时间大于开始时间
+        start_h, start_m, start_s = map(int, start_time_str.split(":"))
+        end_h, end_m, end_s = map(int, end_time_str.split(":"))
+        start_total = start_h * 3600 + start_m * 60 + start_s
+        end_total = end_h * 3600 + end_m * 60 + end_s
+        if start_total==end_total:
+            tk.messagebox.showerror("错误", "结束时间不能与开始时间相同")
+            return
+
+        self.timer_start_time = start_time_str
+        self.timer_end_time = end_time_str
+        self.timer_active = True
+        self.text_box.configure(state=tk.NORMAL)
+        self.text_box.insert(tk.END,
+                             f"\n定时刷课已开启:\n  开始时间: {self.timer_start_time}\n  结束时间: {self.timer_end_time}"
+                             f"\n请勿关闭此窗口，否则定时刷课将无法正常开启")
+
+        self.text_box.see(tk.END)
+        with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as f:
+            self.account_info = json.load(f)
+        self.account_info['timer_active']='True'
+        self.account_info['timer_start']=self.timer_start_time
+        self.account_info['timer_end']=self.timer_end_time
+        with open(r'task/tool/account_info.json', 'w', encoding='utf-8') as f:
+            json.dump(self.account_info, f)
+        window.destroy()
+
+    # 关闭定时刷课设置窗口
+    def close_timer_window(self, window):
+        """关闭定时刷课设置窗口"""
+        window.destroy()
+        self.timer_active = False
+        self.text_box.configure(state=tk.NORMAL)
+        self.text_box.insert(tk.END, "\n定时刷课已禁用")
+        with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as f:
+            self.account_info = json.load(f)
+        self.account_info['timer_active']='False'
+        with open(r'task/tool/account_info.json', 'w', encoding='utf-8') as f:
+            json.dump(self.account_info, f)
     def close(self):
+
+        self.process_condition=False
+        self.start_button.grid(row=0, column=0,padx=5,  pady=10)
+        self.close_button.grid_forget()
         self.reopen_frame()
         if self.process is not None:
             try:
@@ -1219,6 +1348,10 @@ class Start:
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.time_label.configure(text=f"当前时间: {current_time}")
         self.root.after(1000, self.update_time)  # 每秒更新一次
+        if self.timer_start_time in current_time and not self.process_condition and self.timer_active:
+            self.start()
+        if self.timer_end_time in current_time and self.process_condition and self.timer_active:
+            self.close()
 
     def change_font(self):
         self.font = (self.font_entry.get(), int(self.size_entry.get()))
@@ -1297,6 +1430,11 @@ class Start:
             return False
         else:
             self.account_info['choice'] = self.question_entry.get()
+        if self.after_finish_question_entry.get()== '' and self.question_entry.get()=='DeepSeek AI':
+            tk.messagebox.showerror('警告', message='请完成答完题后的设置')
+            return False
+        else:
+            self.account_info['after_finish_question'] = self.after_finish_question_entry.get()
         if self.vido_question_entry.get() =='' and self.radio_var.get()==1 :
             tk.messagebox.showerror('警告', message='请完成视频题目设置')
             return False
@@ -1333,8 +1471,8 @@ class Start:
         self.account_info['lock_screen'] = self.lock_screen_check.get()
         self.account_info['radio_var']=self.radio_var.get()
 
-        self.result = tk.messagebox.askokcancel('确认保存', '你确定要保存吗？\n(使用DeepSeek可支持全题型作答)')
-        if self.result:
+        result = tk.messagebox.askokcancel('确认保存', '你确定要保存吗？\n(使用DeepSeek可支持全题型作答)')
+        if result:
             with open(r'task/tool/account_info.json', 'w', encoding='utf-8') as f:
                 json.dump(self.account_info, f)
             with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as fil:
@@ -1374,6 +1512,7 @@ class Start:
                 self.password_entry.insert(0, self.account_info['password'])
                 self.cour_entry.set( self.account_info['cour'][0])
                 self.question_entry.set( self.account_info['choice'])
+                self.after_finish_question_entry.set( self.account_info['after_finish_question'])
                 if self.account_info['video_title_choice']!='':
                     self.vido_question_entry.set( self.account_info['video_title_choice'])
                 self.discussion_entry.set( self.account_info['discussion_choice'])
@@ -1396,6 +1535,10 @@ class Start:
                     pass
                 for cour_name in self.account_info['cour'][1:]:
                     self.add_course(cour_name)
+                if self.account_info['timer_active']=='True':
+                    self.timer_active=True
+                self.timer_start_time=self.account_info['timer_start']
+                self.timer_end_time=self.account_info['timer_end']
         except FileNotFoundError:
             pass
 

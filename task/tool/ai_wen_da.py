@@ -34,11 +34,6 @@ class AnswerResult:
     msg: str = ""  # 消息
     error: Optional[Exception] = None
 
-
-class Cache:
-    """缓存管理类"""
-
-
 class Cache:
     """缓存管理类"""
 
@@ -100,7 +95,7 @@ class AnswerAPI:
 
     async def get_free_answers(self, question: Question) -> List[AnswerResult]:
         """获取所有答案源"""
-        tasks = [self.query_api(question)]
+        tasks = [self.get_answer4(question),self.get_answer3(question)]
         return await asyncio.gather(*tasks)
 
     async def get_answers_free(self, question: Question) -> List[AnswerResult]:
@@ -131,7 +126,7 @@ class AnswerAPI:
                     invalid_keywords = ["傀儡", "公众号", "李恒雅", "一之"]
                     if not any(keyword in answer_text for keyword in invalid_keywords):
                         answers = answer_text.split('#')
-                        print(answers,flush=True)
+                        # print(answers,flush=True)
                         return AnswerResult(
                             form="一之题库",
                             answer=answers,
@@ -232,6 +227,7 @@ class AnswerAPI:
             if response.status_code == 200:
                 result = response.json()
                 if result.get('code') == 200:
+                    # print(result.get('data', {}).get('answer', []),flush=True)
                     return AnswerResult(
                         form="爱问答题库",
                         answer=result.get('data', {}).get('answer', []),
@@ -255,7 +251,7 @@ class AnswerAPI:
                 msg="请求失败"
             )
 
-    async def query_api(self,question: Question)-> AnswerResult:
+    async def get_answer3(self,question: Question)-> AnswerResult:
         """
         请求 wkexam API 获取答案
         :param question: 你要查询的问题字符串
@@ -292,18 +288,15 @@ class AnswerAPI:
                 answer = data["data"]["answer"]
                 # 去掉首尾的空白字符（比如 \n 和空格）
                 answer = re.split(r'#', answer.strip())
-                print("请求成功！")
+                # print(answer,flush=True)
                 if not answer:
-                    return AnswerResult(
-                form="免费题库",
-                answer=[],
-                duration=10,
-                msg="无答案"
-            )
-                if type(answer)!=list:
-                    answer=[str(answer)]
+                    return AnswerResult(form="免费题库",
+                                        answer=[],
+                                        duration=10,
+                                        msg="无答案"
+                                    )
                 return AnswerResult(
-                    form="免费题库",
+                    form="免费题库3",
                     answer=answer,
                     duration=duration,
                     msg=data.get('msg', '')
@@ -326,6 +319,77 @@ class AnswerAPI:
             )
         except requests.exceptions.RequestException as e:
             print(f"请求过程中发生错误：{e}")
+            return AnswerResult(
+                form="免费题库",
+                answer=[],
+                error=e,
+                duration=10,
+                msg="请求失败"
+            )
+        except ValueError as e:
+            print(f"解析返回数据失败，返回内容可能不是有效的 JSON。错误：{e}")
+            return AnswerResult(
+                form="免费题库",
+                answer=[],
+                error=e,
+                duration=10,
+                msg="请求失败"
+            )
+
+    async def get_answer4(self,question: Question)-> AnswerResult:
+        url = 'https://cx.icodef.com/wyn-nb?v=4'
+
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': 'd4UgUg49pkJauTLr'
+        }
+
+        data = {
+            'question': question.question  # 将 ${title} 替换为实际的问题内容
+        }
+        start_time = time.time()
+        try:
+            response = requests.post(url, headers=headers, data=data)
+            response.raise_for_status()  # 检查HTTP错误
+
+            result = response.json()
+
+            # 处理返回结果（对应 handler 的逻辑）
+            if result.get('code') == 1:
+                answer=result.get('data')
+                answer = re.split(r'#', answer.strip())
+                # print(answer,flush=True)
+                duration = int((time.time() - start_time) * 1000)
+                if not answer:
+                    return AnswerResult(form="免费题库",
+                                        answer=[],
+                                        duration=10,
+                                        msg="无答案"
+                                        )
+                return AnswerResult(
+                    form="免费题库4",
+                    answer=answer,
+                    duration=duration,
+                    msg=data.get('msg', '')
+                )
+            else:
+                return AnswerResult(
+                    form="免费题库",
+                    answer=[],
+                    duration=10,
+                    msg="请求失败"
+                )
+
+        except requests.exceptions.Timeout:
+            print("请求超时，请检查网络或稍后重试。",flush=True)
+            return AnswerResult(
+                form="免费题库",
+                answer=[],
+                duration=10,
+                msg="请求失败"
+            )
+        except requests.exceptions.RequestException as e:
+            print(f"请求过程中发生错误：{e}",flush=True)
             return AnswerResult(
                 form="免费题库",
                 answer=[],
@@ -462,7 +526,7 @@ class AnswerMatcher:
 
         # 过滤有效答案
         for result in answer_results:
-            if result.answer:
+            if result.answer!=[''] and result.answer!=[]:
                 answers_to_use.append(result)
 
         if not answers_to_use:
@@ -555,14 +619,17 @@ class AutoAnswer:
     def __init__(self):
         self.api = AnswerAPI()
         self.matcher = AnswerMatcher()
-    def use_deepseek(self, question: Question) :
+    def use_deepseek(self, question: Question,api) :
         """使用DeepSeek API获取答案"""
         start_time = time.time()
         typ_dict = {'0': '单选题', '1': '多选题', '2': '填空题', '3': '判断题', '9': '简答题'}
         title = "【" + typ_dict[question.type] + "】" + question.question + str(question.options)
-        answer = DeepSeekAsk(question.API, title,typ_dict[question.type])
+        answer = DeepSeekAsk(api, title,typ_dict[question.type])
         if type(answer) is str:
-            answer = ast.literal_eval(answer)  # 转换为列表
+            try:
+                answer = ast.literal_eval(answer)  # 转换为列表
+            except:
+                answer = [answer]
 
         duration = int((time.time() - start_time) * 1000)
         return [AnswerResult(
@@ -582,28 +649,33 @@ class AutoAnswer:
 
         # 2. 如果缓存没有，从API获取
         if not cache_result.answer :
-            print("🌐 开始从网络API获取答案...",flush=True)
-            time.sleep(1)
-            api_results = await self.api.get_answers_free(question)
-
-            # 显示每个API的结果
-            for i, result in enumerate(api_results, 1):
-                status = "✅ 找到答案" if result.answer else "❌ 未找到"
-                # print(f"   {status} | 耗时: {result.duration}ms",flush=True)
-                print(result.answer,flush=True)
-                if result.answer:
-                    break
-
+            if 'sk-' in question.API:
+                print("🌐 开始从网络API获取答案...",flush=True)
+                time.sleep(1)
+                api_results = await self.api.get_answers_free(question)
+                # 显示每个API的结果
+                for i, result in enumerate(api_results, 1):
+                    status = "✅ 找到答案" if result.answer else "❌ 未找到"
+                    # print(f"   {status} | 耗时: {result.duration}ms",flush=True)
+                    if result.answer:
+                        print(result.answer,flush=True)
+                match_result = self.matcher.api_answer_match(api_results, question)
+                if not match_result.get('haveAnswer'):
+                    print('稍侯', flush=True)
+                    api_results = await self.api.get_free_answers(question)
+                    match_result = self.matcher.api_answer_match(api_results, question)
+                if not match_result.get('haveAnswer'):
+                    print('正在使用deepseek搜索中...',flush=True)
+                    api_results =self.use_deepseek(question,question.API)
+            else:
+                print('API错误',flush=True)
+                return {'res': '', 'haveAnswer': False}
         else:
             api_results = [cache_result]
             print(f"🎯 使用缓存答案",flush=True)
             print(cache_result.answer,flush=True)
             # 3. 匹配答案
         match_result = self.matcher.api_answer_match(api_results, question)
-        if not match_result.get('haveAnswer'):
-            api_results=self.use_deepseek(question)
-            match_result = self.matcher.api_answer_match(api_results, question)
-
         # 添加详细的来源信息输出
         if match_result.get('haveAnswer'):
             # 缓存找到的答案
@@ -661,5 +733,5 @@ async def main(typ, question, options,api):
                     return answer_source.answer
             return result['form'].answer if result.get('form') else []
         else:
-            print("❌ 未找到答案",flush=True)
+            print("未找到答案",flush=True)
             return []

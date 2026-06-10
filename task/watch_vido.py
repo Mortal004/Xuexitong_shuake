@@ -107,33 +107,32 @@ def check_video_question(driver,API,video_title_choice):
                 except:
                     answer = [answer]
             if not answer:
-                print(color.red(f'❌ 答题失败'), flush=True)
+                print(color.red(f'答题失败,无答案'), flush=True)
                 return
             else:
                 finish_video_question(options_txt,options,answer,question_type)
                 submit.click()
-        else:
-            try:
-                if question_type=='单选题' or question_type=='判断题':
-                    for option in options:
+        #随机答题
+        try:
+            if question_type=='单选题' or question_type=='判断题':
+                for option in options:
+                    option.click()
+                    #提交
+                    submit.click()
+            elif question_type=='多选题':
+                answer_lost=generate_combinations_list(options)
+                last_ans_set=set()
+                for answer in answer_lost:
+                    now_ans_set=set(answer)
+                    # 使用 ^ 运算符计算对称差集
+                    different_elements = now_ans_set ^ last_ans_set
+                    for option in different_elements:
                         option.click()
-                        #提交
-                        submit.click()
-                elif question_type=='多选题':
-                    answer_lost=generate_combinations_list(options)
-                    last_ans_set=set()
-                    for answer in answer_lost:
-                        now_ans_set=set(answer)
-                        # 使用 ^ 运算符计算对称差集
-                        different_elements = now_ans_set ^ last_ans_set
-                        for option in different_elements:
-                            option.click()
-                        last_ans_set=now_ans_set
-                        #提交
-                        submit.click()
-            except:
-                pass
-
+                    last_ans_set=now_ans_set
+                    #提交
+                    submit.click()
+        except:
+            pass
         #继续学习
         try:
             continue_learn=element.find_element(By.ID,'videoquiz-continue')
@@ -147,7 +146,6 @@ def check_video_question(driver,API,video_title_choice):
             pass
     except:
         return
-
 
 def check_vido_play(driver, last_time, current_time):
     global b, pause_start_time
@@ -163,7 +161,7 @@ def check_vido_play(driver, last_time, current_time):
                 driver.find_element(By.CSS_SELECTOR,
                                     '[class="vjs-play-control vjs-control vjs-button vjs-paused"]').click()
             except :
-                print(color.red(f'❌ 点击失败'), flush=True)
+                print(color.red(f'点击失败'), flush=True)
             pause_start_time = time.time()  # 记录第一次检测到暂停的时间
         elif b == 3 and int(speed)>=2:
         # 当暂停时间间隔小于2秒时，执行原elif的代码
@@ -196,6 +194,7 @@ def check_vido_play(driver, last_time, current_time):
     else:
         pause_start_time = 0  # 视频正常播放，重置暂停时间记录
         b=0
+
 def handle_video_error_alert(driver):
     try:
         alert = driver.switch_to.alert
@@ -212,6 +211,7 @@ def handle_video_error_alert(driver):
             raise Exception('视频播放异常')
     except NoAlertPresentException:
         return
+
 def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen,API,video_title_choice):
     last_time = 0
     h = 0

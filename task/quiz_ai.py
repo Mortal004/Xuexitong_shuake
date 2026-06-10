@@ -24,7 +24,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 
 class Answer:
-    def __init__(self, driver, test_frame, course_name, api,work_choice,times=0):
+    def __init__(self, driver, test_frame, course_name, api,work_choice,after_finish_question,times=0):
         self.driver=driver
         self.test_frame = test_frame
         self.decodeSecret = None
@@ -36,6 +36,13 @@ class Answer:
         self.frame=test_frame
         self.API_KEY=api
         self.work_choice=work_choice
+        # 使用正则表达式提取百分比数字
+        match = re.search(r'(\d+)%', after_finish_question)
+        if match:
+            self.after_finish_question = int(match.group(1)) / 100
+        else:
+            self.after_finish_question=after_finish_question
+
         self.ans_rate =None
         self.all_title_dit={}
         self.num_option_dit = {}
@@ -88,7 +95,7 @@ class Answer:
                 print(color.green('开始第{}次重新做题'.format(self.times+1)))
                 self.driver.switch_to.frame('iframe')
                 print(color.green('重新做题'), flush=True)
-                Answer(self.driver, self.frame, self.course_name, self.API_KEY, self.work_choice,self.times+1)
+                Answer(self.driver, self.frame, self.course_name, self.API_KEY, self.work_choice,self.after_finish_question,self.times+1)
             elif self.times>=3:
                 print(color.red('测试答题失败，已重试3次'), flush=True)
     def get_title_option(self):
@@ -122,7 +129,7 @@ class Answer:
                     self.title_and_option_element.find_elements(By.TAG_NAME, 'li'))
                 for option in self.title_and_option_element.find_elements(By.TAG_NAME, 'li'):
                     self.option_text_list.append(re.sub(r'\s+', '', self.decodeSecret.decode(option.text).strip()))
-            elif self.questionType in ['简答题', '论述题', '填空题','名词解释','论述题']:
+            elif self.questionType in ['简答题', '论述题', '填空题','名词解释']:
                 self.all_optionWebElementList.append(None)
                 self.option_text_list  =['']
             else:
@@ -140,6 +147,7 @@ class Answer:
                         main(self.questionType_list[i], self.only_title_text[i], self.num_option_dit[i], self.API_KEY))
                 except Exception as e:
                     print(color.red(f'第{i+1}题搜索失败：{e}'), flush=True)
+
                 if type(self.answer_list) is str:
                     self.answer_list = eval(self.answer_list)
                 if not self.answer_list:
@@ -173,9 +181,6 @@ class Answer:
             for no_answer_title in self.no_answer_dit.values():
                 title += no_answer_title
             answers = DeepSeekAsk(self.API_KEY, title, 'all')
-            if not answers:
-                print(color.red('deepseek搜题失败'), flush=True)
-                return
             # answers='C/B/ABCD/ABCD/实体经济/'
             parts = re.split(r'/', answers)
             for key, no_answer_title in self.no_answer_dit.items():
@@ -294,10 +299,14 @@ class Answer:
     def submit(self):
         formatted_result = "{:.2%}".format(self.ans_rate)
         print(color.red(f'本次答题率为{formatted_result}'), flush=True)
-        if self.ans_rate >= 0.9 or self.work_choice =='随机答题':
+        if self.after_finish_question=='仅自动保存':
+            print(color.yellow('3秒后保存'), flush=True)
+            time.sleep(3)
+            self.driver.find_element(By.CSS_SELECTOR, '[class="btnSave workBtnIndex"]').click()
+        elif self.after_finish_question=='强制自动提交'  or self.work_choice =='随机答题' or self.ans_rate >= self.after_finish_question:
             # 点击提交
-            print(color.yellow('5秒后提交'), flush=True)
-            time.sleep(5)
+            print(color.yellow('3秒后提交'), flush=True)
+            time.sleep(3)
             try:
                 self.driver.find_element(By.CSS_SELECTOR, '[class="btnSubmit workBtnIndex"]').click()
                 time.sleep(1)
@@ -315,9 +324,11 @@ class Answer:
                 return False
             self.save_score()
         else:
+            print(color.yellow(f'答题率未达到提交要求{self.after_finish_question}'), flush=True)
             print(color.yellow('3秒后保存'), flush=True)
             time.sleep(3)
             self.driver.find_element(By.CSS_SELECTOR, '[class="btnSave workBtnIndex"]').click()
+
         return True
 
     def save_score(self):
@@ -341,7 +352,7 @@ class Answer:
                 pass
         self.driver.switch_to.default_content()
 
-def finish_quiz(driver, course_name, API, choice):
+def finish_quiz(driver, course_name, API, choice,after_finish_question):
     driver.switch_to.default_content()
     driver.switch_to.frame('iframe')
     test_frames = driver.find_elements(By.XPATH,
@@ -349,10 +360,11 @@ def finish_quiz(driver, course_name, API, choice):
     print(color.magenta(f'已检测到{len(test_frames)}个测试'), flush=True)
     for test_frame in test_frames:
         try:
-            Answer(driver, test_frame, course_name, API, choice)
+            Answer(driver, test_frame, course_name, API, choice,after_finish_question)
         except:
             error_msg = traceback.format_exc()
             send_error(
                 "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n" + error_msg)
-            print(color.yellow('❌ 出错了，具体原因请前往错误日志查看，请自行保存或提交,15秒后继续'), flush=True)
+            print(color.yellow('出错了，具体原因请前往错误日志查看，请自行保存或提交,15秒后继续'), flush=True)
             time.sleep(15)
+

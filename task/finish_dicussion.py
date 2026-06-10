@@ -60,8 +60,6 @@ class Discussion(Common):
             print(f'已输入{self.answer[0]},3秒后点击提交',flush=True)
             time.sleep(3)
             replay_button.click()
-        else:
-            print('未获取到回复内容,即将跳过该任务', flush=True)
         time.sleep(1)
         self.driver.close()
         turn_page(self.driver,'学生学习页面')
