@@ -1,0 +1,11 @@
+# Xuexitong_shuake_mod1 依赖
+# 安装: pip install -r requirements.txt
+
+customtkinter>=5.2.0
+selenium>=4.15.0
+PyAutoGUI>=0.9.53
+requests>=2.28.0
+Pillow>=9.0.0
+colorama>=0.4.6
+fonttools>=4.0.0
+openai>=1.0.0
