@@ -70,7 +70,7 @@ pip install selenium pyautogui requests colorama customtkinter openai
 1. [**Github/release**](https://github.com/Mortal004/Xuexitong_shuake/releases)
 2. [ **迅雷网盘**](https://pan.xunlei.com/s/VOvtzs6dbiSGyNE41Fk5ytgVA1?pwd=tct2#) 
 3. [**夸克网盘**](https://pan.quark.cn/s/bbcc17bcce22)
-4. [**百度网盘**](https://pan.baidu.com/s/5SNWYYYLUd4j1ZoSUbOedsw)
+4. [**百度网盘**](https://pan.baidu.com/s/5TvAVKIajPhOKTGd9qWDfUw)
 
 ## 注意事项
 
