@@ -16,7 +16,23 @@ import pyautogui
 from selenium.webdriver.common.by import By
 import itertools
 
+from task.tool.common import save_record
+from task.tool.face import delete_face_popup
 
+drag_progress_condition = True
+
+
+def click_video_progress_end(driver,pass_vido):
+    global drag_progress_condition
+    if pass_vido and drag_progress_condition:
+        print(color.green('尝试拖动视频进度条'), flush=True)
+        driver.execute_script("""
+                    var video = document.querySelector('video');
+                    if (video) {
+                        video.currentTime = video.duration;
+                    }
+                """)
+        drag_progress_condition=False
 def generate_combinations_list(input_list):
     """
     返回列表形式的组合，完整组合放在第一位
@@ -57,6 +73,7 @@ def get_answer(API,question,typ):
     except Exception as e:
         print(f'答题时出错了{e}',flush=True)
     return answer
+
 def finish_video_question(options_txt,options,answer,question_type):
     answer_num = []
     option_num = 0
@@ -86,6 +103,7 @@ def finish_video_question(options_txt,options,answer,question_type):
         else:
             print(color.yellow(f'已选择选项{ans}'), flush=True)
             continue
+
 def check_video_question(driver,API,video_title_choice):
     try:
         element=driver.find_element(By.CLASS_NAME,'tkTopic')
@@ -147,11 +165,10 @@ def check_video_question(driver,API,video_title_choice):
     except:
         return
 
-def check_vido_play(driver, last_time, current_time):
+def check_vido_play(driver, last_time, current_time,speed,pass_face,vido_iframe):
     global b, pause_start_time
     with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as f:
         account_info = json.load(f)
-        speed = account_info['speed']
     if last_time == current_time and current_time != '':
         pause_duration = time.time() - pause_start_time
         b += 1
@@ -162,9 +179,13 @@ def check_vido_play(driver, last_time, current_time):
                                     '[class="vjs-play-control vjs-control vjs-button vjs-paused"]').click()
             except :
                 print(color.red(f'点击失败'), flush=True)
+                driver.switch_to.default_content()
+                delete_face_popup(driver,pass_face)
+                driver.switch_to.frame('iframe')
+                driver.switch_to.frame(vido_iframe)
             pause_start_time = time.time()  # 记录第一次检测到暂停的时间
-        elif b == 3 and int(speed)>=2:
-        # 当暂停时间间隔小于2秒时，执行原elif的代码
+        elif b == 3 and int(speed) >= 2:
+            # 当暂停时间间隔小于2秒时，执行原elif的代码
             try:
                 if int(speed)>2:
                     print(color.red(f'当前视频已被设置不能调节高倍数，现在将倍数调至2倍'), flush=True)
@@ -212,7 +233,7 @@ def handle_video_error_alert(driver):
     except NoAlertPresentException:
         return
 
-def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen,API,video_title_choice):
+def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen,API,video_title_choice,speed,pass_face):
     last_time = 0
     h = 0
     # 判断是否完成任务
@@ -238,14 +259,13 @@ def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen,API
             break
         else:
             driver.switch_to.default_content()
-            # check_face(driver,driver.current_url,'popDiv1 wid640  faceCollectQrPopVideo  popClass faceRecognition_0')
             driver.switch_to.frame('iframe')
             driver.switch_to.frame(vido_iframe)
             check_internet(driver)
             check_video_question(driver,API,video_title_choice)
             element = driver.find_element(By.CLASS_NAME, 'vjs-current-time-display')
             current_time = element.text
-            check_vido_play(driver, last_time, current_time)
+            check_vido_play(driver, last_time, current_time,speed,pass_face,vido_iframe)
             last_time = current_time
             if current_time == total_time:
                 if h == 0:
@@ -266,8 +286,8 @@ def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen,API
                 pyautogui.move(-20, 0)
     return True
 
-def study_page(driver,course_name,lock_screen,API,video_title_choice):
-    cond=False
+def study_page(driver,course_name,lock_screen,API,video_title_choice,pass_vido,speed,pass_face):
+    global drag_progress_condition
     driver.switch_to.default_content()
     driver.switch_to.frame('iframe')
     try:
@@ -280,6 +300,7 @@ def study_page(driver,course_name,lock_screen,API,video_title_choice):
         return
 
     for i in range(len(elements1)):
+        drag_progress_condition = True
         element1=elements1[i]
         # 定位到该元素的上一级（父元素）
         parent_element = element1.find_element(By.XPATH, "..")
@@ -302,9 +323,10 @@ def study_page(driver,course_name,lock_screen,API,video_title_choice):
                 pass
             #点击我知道了
             driver.switch_to.default_content()
+            delete_face_popup(driver,pass_face)
             driver.switch_to.frame('iframe')
             driver.switch_to.frame(vido_iframe)
-            time.sleep(1)
+
             try:
                 element=driver.find_element(By.CLASS_NAME,'writeNote_vid_blue')
                 element.click()
@@ -317,6 +339,7 @@ def study_page(driver,course_name,lock_screen,API,video_title_choice):
                 print(color.green('调节成功'), flush=True)
             except:
                 print(color.yellow('未找到音量，或已经调节'), flush=True)
+
             time.sleep(1)
             element=driver.find_element(By.CLASS_NAME,'vjs-duration-display')
             total_time=element.text
@@ -325,44 +348,16 @@ def study_page(driver,course_name,lock_screen,API,video_title_choice):
                 total_time='1'
             else:
                 print(color.green(f'该视频总时长为：{total_time}'),flush=True)
+            click_video_progress_end(driver,pass_vido)
             print(color.yellow('请不要将窗口最小化，这有可能导致脚本异常\n视频播放完毕会自动跳转\n正在观看视频中……'),flush=True)
             driver.switch_to.default_content()
             driver.switch_to.frame('iframe')
             b = 0
             pause_start_time = 0  # 添加变量记录暂停开始时间
-            check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen,API,video_title_choice)
-            cond=  True
+            check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen,API,video_title_choice,speed,pass_face)
+            save_record(driver, course_name, time, vido_iframe, '视频')
         driver.switch_to.default_content()
         # check_face(driver,driver.current_url,'popDiv1 wid640  faceCollectQrPopVideo  popClass faceRecognition_0')
         driver.switch_to.frame('iframe')
     print(color.green('所有视频均已完成'),flush=True)
-    if cond and judge_active(driver):
-        save_vido(driver,course_name)
-        print(color.green('已保存视频观看记录'),flush=True)
     return
-
-def save_vido(driver,course_name):
-    driver.switch_to.default_content()
-    element = driver.find_element(By.CLASS_NAME, 'prev_title')
-    title = element.get_attribute('title')
-    try:
-        f = open(fr'task\record\《{course_name}》的刷课记录.txt', 'a', encoding='utf-8')
-        f.write(
-            f'已刷完:《{title}》章节中的所有视频\n完成时间：{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))}\n\n')
-    except:
-        pass
-
-def judge_active(driver):
-    driver.switch_to.default_content()
-    element=driver.find_element(By.CSS_SELECTOR, '[class="prev_ul clearfix"]')
-    elements = element.find_elements(By.CSS_SELECTOR, '[title="视频"]')
-    num=len(elements)
-    try:
-        txt=elements[num-1].get_attribute('class')
-    except IndexError:
-        txt = 'active'
-    if txt=='active':
-        return True
-    else:
-        return False
-

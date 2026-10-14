@@ -10,6 +10,8 @@ import traceback
 
 from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
+
+from task.tool.common import turn_page, Common
 from task.tool.no_secret import DecodeSecret
 from task.tool import color
 import sys
@@ -26,16 +28,16 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 class Answer:
     def __init__(self, driver, test_frame, course_name, api,work_choice,after_finish_question,times=0):
         self.driver=driver
-        self.test_frame = test_frame
+        self.frame = test_frame
         self.decodeSecret = None
         self.questionList0 = []
         self.no_answer_dit = {}# 存储无答案的题目
         self.answer_list = []
         self.course_name = course_name
         self.driver=driver
-        self.frame=test_frame
         self.API_KEY=api
         self.work_choice=work_choice
+        self.turn_page=turn_page
         # 使用正则表达式提取百分比数字
         match = re.search(r'(\d+)%', after_finish_question)
         if match:
@@ -58,17 +60,13 @@ class Answer:
 
     def main(self):
         # 滚动到测试
-        try:
-            self.driver.execute_script("arguments[0].scrollIntoView();",self.test_frame)
-
-        except:
-            return
+        self.driver.execute_script("arguments[0].scrollIntoView();", self.frame)
         # 判断是否完成任务
         try:
             element = self.frame.find_element(By.XPATH, 'preceding-sibling::div[1]')
             txt = element.get_attribute('aria-label')
         except:
-            self.driver.switch_to.frame(self.test_frame)
+            self.driver.switch_to.frame(self.frame)
             self.driver.switch_to.frame('frame_content')
             element = self.driver.find_element(By.CLASS_NAME, 'testTit_status')
             txt = element.text
@@ -81,8 +79,18 @@ class Answer:
         else:
             self.get_title_option()
             print(color.red('正在搜索中，请耐心等待...'))
-            self.use_ai_wen_da()
+            if self.API_KEY=='sk-open_deepseek':
+                self.no_answer_dit = self.all_title_dit
+            else:
+                self.use_ai_wen_da()
+                for i, answer in self.num_answer_dit.items():
+                    if not answer:
+                        self.no_answer_dit[i] = self.all_title_dit[i]
             self.use_deepseek()
+            if not turn_page(self.driver,'学生学习页面')=='True':
+                self.driver.switch_to.frame('iframe')
+                self.driver.switch_to.frame(self.frame)
+                self.driver.switch_to.frame('frame_content')
             print(color.green('开始答题'), flush=True)
             for title_num in self.num_answer_dit.keys():
                 if self.finish_title(title_num):
@@ -95,7 +103,7 @@ class Answer:
                 print(color.green('开始第{}次重新做题'.format(self.times+1)))
                 self.driver.switch_to.frame('iframe')
                 print(color.green('重新做题'), flush=True)
-                Answer(self.driver, self.frame, self.course_name, self.API_KEY, self.work_choice,self.after_finish_question,self.times+1)
+                Answer(self.driver, self.frame, self.course_name, self.API_KEY, self.work_choice, self.after_finish_question, self.times + 1)
             elif self.times>=3:
                 print(color.red('测试答题失败，已重试3次'), flush=True)
     def get_title_option(self):
@@ -144,7 +152,7 @@ class Answer:
                 print(color.green('\n<===================  分隔线  ===================>\n'), flush=True)
                 try:
                     self.answer_list = asyncio.run(
-                        main(self.questionType_list[i], self.only_title_text[i], self.num_option_dit[i], self.API_KEY))
+                        main(self.questionType_list[i], self.only_title_text[i], self.num_option_dit[i], self.API_KEY,self.driver))
                 except Exception as e:
                     print(color.red(f'第{i+1}题搜索失败：{e}'), flush=True)
 
@@ -153,7 +161,7 @@ class Answer:
                 if not self.answer_list:
                     try:
                         self.answer_list = asyncio.run(
-                            main(self.questionType_list[i], self.only_title_text[i], self.num_option_dit[i], self.API_KEY))
+                            main(self.questionType_list[i], self.only_title_text[i], self.num_option_dit[i], self.API_KEY,self.driver))
                     except Exception as e:
                         print(color.red(f'第{i+1}题搜索失败：{e}'), flush=True)
                     if type(self.answer_list) is str:
@@ -171,10 +179,9 @@ class Answer:
                 self.num_answer_dit[i] = self.answer_list
 
     def use_deepseek(self):
-        for i, answer in self.num_answer_dit.items():
-            if not answer:
-                self.no_answer_dit[i] = self.all_title_dit[i]
+
         if len(self.no_answer_dit) > 0:
+
             print(color.red('正在使用deepseek搜题，请耐心等待...'), flush=True)
             title = ''
             num = 0
@@ -302,13 +309,21 @@ class Answer:
         if self.after_finish_question=='仅自动保存':
             print(color.yellow('3秒后保存'), flush=True)
             time.sleep(3)
-            self.driver.find_element(By.CSS_SELECTOR, '[class="btnSave workBtnIndex"]').click()
+            button=self.driver.find_element(By.CSS_SELECTOR, '[class="btnSave workBtnIndex"]')
+            #滚动到按钮可见
+            self.driver.execute_script("arguments[0].scrollIntoView();", button)
+            #点击按钮
+            self.driver.execute_script("arguments[0].click();", button)
         elif self.after_finish_question=='强制自动提交'  or self.work_choice =='随机答题' or self.ans_rate >= self.after_finish_question:
             # 点击提交
             print(color.yellow('3秒后提交'), flush=True)
             time.sleep(3)
             try:
-                self.driver.find_element(By.CSS_SELECTOR, '[class="btnSubmit workBtnIndex"]').click()
+                button=self.driver.find_element(By.CSS_SELECTOR, '[class="btnSubmit workBtnIndex"]')
+                #滚动到按钮可见
+                self.driver.execute_script("arguments[0].scrollIntoView();", button)
+                #点击按钮
+                self.driver.execute_script("arguments[0].click();", button)
                 time.sleep(1)
             except NoSuchElementException:
                 print(color.red('当前测验无法提交'), flush=True)
@@ -332,6 +347,7 @@ class Answer:
         return True
 
     def save_score(self):
+        # save_process(self.course_name)
         element = self.driver.find_element(By.CLASS_NAME, 'prev_title')
         title = element.get_attribute('title')
         self.driver.switch_to.frame('iframe')
@@ -341,30 +357,60 @@ class Answer:
             f = open(fr'task\record\《{self.course_name}》的成绩记录.txt', 'a', encoding='utf-8')
             element = self.driver.find_element(By.CSS_SELECTOR, '.achievement i')
             score = element.text
+        except:
+            score = '未查询到'
+            print(color.yellow('未查询到本次测试成绩'), flush=True)
+        try:
             f.write(
                 f'已完成:《{title}》章节中的测试题，完成时间：{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))}\n测试得分：{score}分(本次使用{self.work_choice})\n\n')
+            print(color.green(f'已保存进度'), flush=True)
+            f.close()
         except:
-            print(color.yellow('未查询到本次测试成绩'), flush=True)
-            try:
-                f.write(
-                f'已完成:《{title}》章节的测试题，完成时间：{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))}\n测试得分：未查询到(本次使用{self.work_choice})\n\n')
-            except:
-                pass
-        self.driver.switch_to.default_content()
-
-def finish_quiz(driver, course_name, API, choice,after_finish_question):
-    driver.switch_to.default_content()
-    driver.switch_to.frame('iframe')
-    test_frames = driver.find_elements(By.XPATH,
-                                       '//iframe[@src="/ananas/modules/work/index.html?v=2025-1028-1629&castscreen=0"]')
-    print(color.magenta(f'已检测到{len(test_frames)}个测试'), flush=True)
-    for test_frame in test_frames:
+            pass
+class Quiz(Common):
+    def __init__(self, driver, course_name,API, choice,after_finish_question):
+        super().__init__(
+            driver,
+            '[src="/ananas/modules/work/index.html?v=2025-1028-1629&castscreen=0"]',
+            "测验",
+            course_name
+        )
+        self.API = API
+        self.choice = choice
+        self.after_finish_question = after_finish_question
+        self.driver = driver
+        self.course_name = course_name
+    def start(self):
         try:
-            Answer(driver, test_frame, course_name, API, choice,after_finish_question)
+            Answer(self.driver, self.iframe, self.course_name, self.API, self.choice,self.after_finish_question)
         except:
             error_msg = traceback.format_exc()
             send_error(
                 "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n" + error_msg)
             print(color.yellow('出错了，具体原因请前往错误日志查看，请自行保存或提交,15秒后继续'), flush=True)
+            turn_page(self.driver,'学生学习页面')
             time.sleep(15)
-
+def finish_quiz(driver, course_name, API, choice,after_finish_question):
+    # driver.switch_to.default_content()
+    # driver.switch_to.frame('iframe')
+    # test_frames = driver.find_elements(By.XPATH,
+    #                                    '//iframe[@src="/ananas/modules/work/index.html?v=2025-1028-1629&castscreen=0"]')
+    # print(color.magenta(f'已检测到{len(test_frames)}个测试'), flush=True)
+    # i=0
+    # for test_frame in test_frames:
+    #     if i!=0:
+    #         driver.switch_to.default_content()
+    #         driver.switch_to.frame('iframe')
+    #     print(f'当前处理第{i+1}个测试', flush=True)
+    #     i+=1
+    #     try:
+    #         Answer(driver, test_frame, course_name, API, choice,after_finish_question)
+    #     except:
+    #         error_msg = traceback.format_exc()
+    #         send_error(
+    #             "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n" + error_msg)
+    #         print(color.yellow('出错了，具体原因请前往错误日志查看，请自行保存或提交,15秒后继续'), flush=True)
+    #         turn_page(driver,'学生学习页面')
+    #         time.sleep(15)
+    quiz=Quiz(driver, course_name, API, choice,after_finish_question)
+    quiz.main()

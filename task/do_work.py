@@ -3,16 +3,6 @@ from selenium.webdriver.common.by import By
 from task.tool import color
 from task.quiz_ai import Answer
 
-
-def turn_page(driver,page_name):
-    for handle in driver.window_handles:
-        # 先切换到该窗口
-        driver.switch_to.window(handle)
-        # 得到该窗口的标题栏字符串，判断是不是我们要操作的那个窗口
-        if page_name in driver.title:
-            # 如果是，那么这时候WebDriver对象就是对应的该该窗口，正好，跳出循环，
-            break
-
 class do_work(Answer):
     def __init__(self,driver,course_name,homework,API_KEY):
         Answer.__init__(self,driver,test_frame=None,course_name=course_name,api=API_KEY,work_choice=None,after_finish_question='仅自动保存')
@@ -49,7 +39,7 @@ class do_work(Answer):
         print(color.green(f'已检测到{len(homework_list)}个作业'), flush=True)
         for i in range(len(homework_list)):
             if i != 0:
-                turn_page(self.driver, self.course_name)
+                self.turn_page(self.driver, self.course_name)
                 self.driver.switch_to.frame(self.driver.find_element(By.TAG_NAME, 'iframe'))
             homework = homework_list[i]
             # 获取作业名称
@@ -63,6 +53,7 @@ class do_work(Answer):
             time.sleep(1)
             self.driver.close()
 
+
     def get_answer_list(self):
         self.no_answer_dit = {}
         self.num_answer_dit = {}
@@ -75,7 +66,7 @@ class do_work(Answer):
         self.only_title_text = []
         self.answer_num = []
         # 切换到作业窗口
-        turn_page(self.driver, '作业作答')
+        self.turn_page(self.driver, '作业作答')
         # 查找作业题目数量
         self.questionList0 = self.driver.find_elements(By.CSS_SELECTOR,
                                                            '[class="padBom50 questionLi fontLabel singleQuesId"]')
@@ -109,8 +100,16 @@ class do_work(Answer):
             self.all_title_dit[i] = self.title_and_option_text
             self.num_option_dit[i] = self.option_text_list
         print(color.red('正在搜索中，请耐心等待...'))
-        self.use_ai_wen_da()
+        if self.API_KEY == 'sk-open_deepseek':
+            self.no_answer_dit = self.all_title_dit
+        else:
+            self.use_ai_wen_da()
+            for i, answer in self.num_answer_dit.items():
+                if not answer:
+                    self.no_answer_dit[i] = self.all_title_dit[i]
         self.use_deepseek()
+        self.turn_page(self.driver, '作业作答')
+
         print(color.green('开始答题'), flush=True)
         for title_num in self.num_answer_dit.keys():
             self.finish_title(title_num)

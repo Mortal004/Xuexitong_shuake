@@ -6,8 +6,8 @@ import time
 from selenium.webdriver.common.by import By
 from task.tool.common import Common
 class Audio(Common):
-    def __init__(self,driver,iframe_element):
-        super().__init__(driver,iframe_element,'音频')
+    def __init__(self,driver,iframe_element,course_name):
+        super().__init__(driver,iframe_element,'音频',course_name)
     def start(self):
         self.driver.switch_to.frame(self.iframe)
         play_button = self.driver.find_element(By.CSS_SELECTOR, '[class="vjs-play-control vjs-control vjs-button"]')
@@ -28,7 +28,7 @@ class Audio(Common):
             if self.check_audio_finished():
                 break
             time.sleep(1)
-def play_audio(driver,iframe_element):
-    audio = Audio(driver,iframe_element)
+def play_audio(driver,iframe_element,course_name):
+    audio = Audio(driver,iframe_element,course_name)
     audio.main()
 

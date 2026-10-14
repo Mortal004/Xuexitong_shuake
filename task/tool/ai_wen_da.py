@@ -623,7 +623,10 @@ class AutoAnswer:
         """使用DeepSeek API获取答案"""
         start_time = time.time()
         typ_dict = {'0': '单选题', '1': '多选题', '2': '填空题', '3': '判断题', '9': '简答题'}
-        title = "【" + typ_dict[question.type] + "】" + question.question + str(question.options)
+        if question.type  in ['2','9']:
+            title="【" + typ_dict[question.type] + "】" + question.question
+        else:
+            title = "【" + typ_dict[question.type] + "】" + question.question + str(question.options)
         answer = DeepSeekAsk(api, title,typ_dict[question.type])
         if type(answer) is str:
             try:
@@ -660,7 +663,7 @@ class AutoAnswer:
                     if result.answer:
                         print(result.answer,flush=True)
                 match_result = self.matcher.api_answer_match(api_results, question)
-                if not match_result.get('haveAnswer'):
+                if not match_result.get('haveAnswer') and question.type not in ['2','9']:
                     print('稍侯', flush=True)
                     api_results = await self.api.get_free_answers(question)
                     match_result = self.matcher.api_answer_match(api_results, question)

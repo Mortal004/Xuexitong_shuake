@@ -8,12 +8,11 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from task.tool.DeepSeekAsk import DeepSeekAsk
 import time
-from task.do_work import turn_page
-from task.tool.common import Common
+from task.tool.common import Common,turn_page
 
 class Discussion(Common):
-    def __init__(self,driver,API,iframe_element,discussion_choice):
-        super().__init__(driver,iframe_element,"讨论")
+    def __init__(self,driver,API,iframe_element,discussion_choice,course_name):
+        super().__init__(driver,iframe_element,"讨论",course_name)
         self.question = None
         self.answer = []
         self.API=API
@@ -27,8 +26,10 @@ class Discussion(Common):
                 replyContent = choice_replay.find_element(By.CLASS_NAME, 'replyContent').text
                 self.answer = [replyContent]
             else:
-                self.answer = DeepSeekAsk(self.API, self.question, '简答题')
-
+                if 'sk-' in self.API:
+                    self.answer = DeepSeekAsk(self.API, self.question, '简答题')
+                else:
+                    raise Exception('请输入正确的API')
 
     def start(self):
         # 方式一：等待可点击
@@ -63,7 +64,7 @@ class Discussion(Common):
         time.sleep(1)
         self.driver.close()
         turn_page(self.driver,'学生学习页面')
-def finish_discussion(driver,API,iframe_element,discussion_choice):
-    discussion= Discussion(driver,API,iframe_element,discussion_choice)
+def finish_discussion(driver,API,iframe_element,discussion_choice,course_name):
+    discussion= Discussion(driver,API,iframe_element,discussion_choice,course_name)
     discussion.main()
 
