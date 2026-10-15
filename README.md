@@ -1,4 +1,4 @@
-# 学习通刷课脚本
+# 学习通刷课脚本（[**详细教程**](https://mortal004.github.io/xuexitong-tutorial/)）
 
 ## 前言
 
@@ -12,6 +12,7 @@
 
 本项目旨在通过模拟用户观看视频的行为，自动在学习通上完成刷课任务。主要功能包括：
 - **定时自动刷课**：使用 Selenium 库实现网页自动化操作，模拟真实用户观看视频行为，并支持调节视频播放倍速，最高可至 16 倍速，并且可以自主设定开始与结束刷课的时间
+- **自动签到**：支持在任意地点完成定位签到和普通签到，打破地理限制，无需手动操作即可完成考勤。
 - **连续刷多门课程**：支持最多连续刷3门课程，一门课程刷完后不再需要手动切换下一科，全程自动操作。
 - **同时刷多门课程**：支持最多同时刷一个账号下的3门课程，只需在设置中打开多端学习，但除非是特别紧急，一般不建议开启。
 - **刷题功能**：现在已经可以支持使用deepseek进行搜题，并且加入了一些免费题库，会优先在免费题库中检索答案，然后再用deepseek AI回答。
@@ -75,7 +76,6 @@ pip install selenium pyautogui requests colorama customtkinter openai
 2. [ **迅雷网盘**](https://pan.xunlei.com/s/VOvtzs6dbiSGyNE41Fk5ytgVA1?pwd=tct2#) 
 3. [**夸克网盘**](https://pan.quark.cn/s/bbcc17bcce22)
 4. [**百度网盘**](https://pan.baidu.com/s/5TvAVKIajPhOKTGd9qWDfUw)
-5. [**使用教程**](https://mortal004.github.io/xuexitong-tutorial/)
 
 ## 注意事项
 
