@@ -103,3 +103,11 @@ pip install selenium pyautogui requests colorama customtkinter openai
 
 
 希望这个项目能为你的学习和研究带来帮助，祝你使用愉快！
+
+<a href="https://www.star-history.com/#Mortal004/Xuexitong_shuake&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Mortal004/Xuexitong_shuake&amp;type=Date&amp;transparent=true&amp;theme=dark">
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Mortal004/Xuexitong_shuake&amp;type=Date&amp;transparent=true">
+    <img src="https://api.star-history.com/svg?repos=Mortal004/Xuexitong_shuake&amp;type=Date&amp;transparent=true" alt="Star History Chart">
+  </picture>
+</a>
