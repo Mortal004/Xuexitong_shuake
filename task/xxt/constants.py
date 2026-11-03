@@ -42,7 +42,7 @@ ANALYSIS2 = "https://mobilelearn.chaoxing.com/pptSign/analysis2"
 
 # ---------------- 加解密 / 其他 ----------------
 AES_KEY = "u2oh6Vu^HWe4_AES"          # 本地保存密码 & fanyalogin 传输
-DEFAULT_AMAP_KEY = "cf7120783770ef244dc54f203487bbea"   # 地址->坐标(可用 config 覆盖)
+DEFAULT_AMAP_KEY = ""   # 地址->坐标(可用 config 覆盖)
 AMAP_GEOCODE_URL = "https://restapi.amap.com/v3/geocode/geo"
 
 # ---------------- 运行参数 ----------------
