@@ -2,7 +2,7 @@
 
 ## 前言
 
-注：代码部分暂未同步更新，但[**Github/release**](https://github.com/Mortal004/Xuexitong_shuake/releases)中的是最新版本,新增了问卷自动答题和邮箱报送刷课状态功能（编辑于2026年11月2日）
+注：代码部分暂未同步更新，但[**Github/release**](https://github.com/Mortal004/Xuexitong_shuake/releases)中的是最新版本（编辑于2026年11月2日）
 
 希望各位大学生在使用此脚本时，能合理安排学习与刷课的时间，切勿过度依赖，真正掌握知识才是最重要的。
 
@@ -14,6 +14,7 @@
 - **定时自动刷课**：使用 Selenium 库实现网页自动化操作，模拟真实用户观看视频行为，并支持调节视频播放倍速，最高可至 16 倍速，并且可以自主设定开始与结束刷课的时间。
 - **邮箱报送**：开启邮箱通知后，开始刷课、完成章节、课程结束和程序报错都会自动发送邮件提醒，附课程名称与实时进度，多端模式也能按课程分别告知。
 - **自动签到**：支持在任意地点完成定位签到和普通签到，打破地理限制，无需手动操作即可完成考勤。
+- **复习模式**：可以刷学习时长以及次数。
 - **连续刷多门课程**：支持最多连续刷3门课程，一门课程刷完后不再需要手动切换下一科，全程自动操作。
 - **同时刷多门课程**：支持最多同时刷一个账号下的3门课程，只需在设置中打开多端学习，但除非是特别紧急，一般不建议开启。
 - **刷题功能**：现在已经可以支持使用deepseek进行搜题，并且加入了一些免费题库，会优先在免费题库中检索答案，然后再用deepseek AI回答。
@@ -74,9 +75,9 @@ pip install selenium pyautogui requests colorama customtkinter openai
 
 ## 下载已打包的文件
 1. [**Github/release**](https://github.com/Mortal004/Xuexitong_shuake/releases)
-2. [ **迅雷网盘**](https://pan.xunlei.com/s/VOvtzs6dbiSGyNE41Fk5ytgVA1?pwd=tct2#) 
-3. [**夸克网盘**](https://pan.quark.cn/s/bbcc17bcce22)
-4. [**百度网盘**](https://pan.baidu.com/s/5TvAVKIajPhOKTGd9qWDfUw)
+2. [ **迅雷网盘**](https://pan.xunlei.com/s/VP5_9N46J5V-tJUBCXXpVEaLA1?pwd=9egr#) 
+3. [**夸克网盘**](https://pan.quark.cn/s/8ff80d48d6c1)
+4. [**百度网盘**](https://pan.baidu.com/s/1sBJDAzHq6dUqwrxLsRqMtA?pwd=1234)
 
 ## 注意事项
 
