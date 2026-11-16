@@ -2,7 +2,7 @@
 
 ## 前言
 
-注：代码部分已经同步更新，[**Github/release**](https://github.com/Mortal004/Xuexitong_shuake/releases)中也是最新版本（编辑于2026年11月13日）
+注：代码部分已经同步更新，[**Github/release**](https://github.com/Mortal004/Xuexitong_shuake/releases)中也是最新版本（编辑于2026年11月16日）
 
 希望各位大学生在使用此脚本时，能合理安排学习与刷课的时间，切勿过度依赖，真正掌握知识才是最重要的。
 
