@@ -1,3 +1,8 @@
+# Copyright (c) 2025 Mortal004
+# All rights reserved.
+# This software is provided for non-commercial use only.
+# For more information, see the LICENSE file in the root directory of this project.
+
 """设置页面 — 配置、账号、功能、高级设置的全部 UI 和交互逻辑"""
 import tkinter as tk
 import webbrowser

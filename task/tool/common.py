@@ -1,3 +1,8 @@
+# Copyright (c) 2025 Mortal004
+# All rights reserved.
+# This software is provided for non-commercial use only.
+# For more information, see the LICENSE file in the root directory of this project.
+
 from selenium.webdriver.common.by import By
 from task.tool import color
 import time

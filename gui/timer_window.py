@@ -1,3 +1,8 @@
+# Copyright (c) 2025 Mortal004
+# All rights reserved.
+# This software is provided for non-commercial use only.
+# For more information, see the LICENSE file in the root directory of this project.
+
 """定时刷课设置窗口"""
 import re
 import tkinter as tk

@@ -1,3 +1,7 @@
+# Copyright (c) 2025 Mortal004
+# All rights reserved.
+# This software is provided for non-commercial use only.
+# For more information, see the LICENSE file in the root directory of this project.
 """配置读写管理器，统一管理 account_info.json 和 course_name.json 的读写"""
 import json
 import os

@@ -1,3 +1,7 @@
+# Copyright (c) 2025 Mortal004
+# All rights reserved.
+# This software is provided for non-commercial use only.
+# For more information, see the LICENSE file in the root directory of this project.
 # -*- coding: utf-8 -*-
 """加解密工具: AES-128-CBC(本地保存密码 / fanyalogin 传输)、MD5、设备指纹"""
 from __future__ import annotations

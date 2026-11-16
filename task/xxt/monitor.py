@@ -1,3 +1,7 @@
+# Copyright (c) 2025 Mortal004
+# All rights reserved.
+# This software is provided for non-commercial use only.
+# For more information, see the LICENSE file in the root directory of this project.
 # -*- coding: utf-8 -*-
 """监控循环: 拉取全部课程 -> 查找进行中的 普通/位置 签到 -> 自动签到, 每 7 秒一轮"""
 from __future__ import annotations

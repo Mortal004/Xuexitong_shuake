@@ -1,3 +1,8 @@
+# Copyright (c) 2025 Mortal004
+# All rights reserved.
+# This software is provided for non-commercial use only.
+# For more information, see the LICENSE file in the root directory of this project.
+
 """赞助页面 — 打赏二维码、邮箱复制等 UI 和交互逻辑"""
 import tkinter as tk
 from tkinter import messagebox

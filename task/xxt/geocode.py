@@ -1,3 +1,7 @@
+# Copyright (c) 2025 Mortal004
+# All rights reserved.
+# This software is provided for non-commercial use only.
+# For more information, see the LICENSE file in the root directory of this project.
 # -*- coding: utf-8 -*-
 """地址 -> 坐标 (高德地理编码)。仅当活动 content 里没有经纬度时使用。"""
 from __future__ import annotations

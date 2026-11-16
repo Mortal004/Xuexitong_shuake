@@ -1,3 +1,7 @@
+# Copyright (c) 2025 Mortal004
+# All rights reserved.
+# This software is provided for non-commercial use only.
+# For more information, see the LICENSE file in the root directory of this project.
 # -*- coding: utf-8 -*-
 """课程列表 + 进行中签到活动扫描"""
 from __future__ import annotations

@@ -1,3 +1,7 @@
+# Copyright (c) 2025 Mortal004
+# All rights reserved.
+# This software is provided for non-commercial use only.
+# For more information, see the LICENSE file in the root directory of this project.
 # -*- coding: utf-8 -*-
 """HTTP 客户端: 维护一条 cookie 链, 每个请求都带上(与 Android 端做法一致)"""
 from __future__ import annotations
