@@ -93,25 +93,24 @@ class AnswerAPI:
         # print('生成题目哈希值:',hashlib.md5(content.encode()).hexdigest(),flush=True)
         return hashlib.md5(content.encode()).hexdigest()
 
-    async def get_free_answers(self, question: Question) -> List[AnswerResult]:
-        """获取所有答案源"""
-        tasks = [self.get_answer4(question),self.get_answer3(question)]
-        return await asyncio.gather(*tasks)
 
     async def get_answers_free(self, question: Question) -> List[AnswerResult]:
         """免费答案获取"""
-        tasks = [self.get_main_answer(question), self.get_answer1(question),self.get_answer2(question)]
+        tasks = [ self.get_answer1(question),self.get_answer3(question)]
         return await asyncio.gather(*tasks)
 
     async def get_answer1(self, question: Question) -> AnswerResult:
         """从一之题库获取答案"""
-        headers = self._generate_random_headers()
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Authorization": "dCap9EuLNv1FyimW",
+        }
         data = {"question": question.question}
 
         try:
             start_time = time.time()
             response = requests.post(
-                "http://cx.icodef.com/wyn-nb?v=4",
+                "https://cx.icodef.com/wyn-nb?v=4",
                 json=data,
                 headers=headers,
                 timeout=10
@@ -204,52 +203,6 @@ class AnswerAPI:
         except Exception as e:
             return AnswerResult(form="muketool", answer=[])
 
-    async def get_main_answer(self, question: Question) -> AnswerResult:
-        """从爱问答题库获取答案"""
-        data = {
-            "type": question.type,
-            "question": question.question,
-            "options": question.options.copy(),
-            "html": question.html,
-            "workType": question.work_type,
-            "pageType": question.page_type
-        }
-
-        try:
-            start_time = time.time()
-            response = requests.post(
-                "https://aiask.wk66.top/api/search",
-                json=data,
-                timeout=10
-            )
-            duration = int((time.time() - start_time) * 1000)
-
-            if response.status_code == 200:
-                result = response.json()
-                if result.get('code') == 200:
-                    # print(result.get('data', {}).get('answer', []),flush=True)
-                    return AnswerResult(
-                        form="爱问答题库",
-                        answer=result.get('data', {}).get('answer', []),
-                        duration=duration,
-                        msg=result.get('msg', '')
-                    )
-
-            return AnswerResult(
-                form="爱问答题库",
-                answer=[],
-                duration=duration,
-                msg=result.get('msg', '') if response.status_code == 200 else '请求失败'
-            )
-
-        except Exception as e:
-            return AnswerResult(
-                form="爱问答题库",
-                answer=[],
-                error=e,
-                duration=10,
-                msg="请求失败"
-            )
 
     async def get_answer3(self,question: Question)-> AnswerResult:
         """
@@ -663,10 +616,6 @@ class AutoAnswer:
                     if result.answer:
                         print(result.answer,flush=True)
                 match_result = self.matcher.api_answer_match(api_results, question)
-                if not match_result.get('haveAnswer') and question.type not in ['2','9']:
-                    print('稍侯', flush=True)
-                    api_results = await self.api.get_free_answers(question)
-                    match_result = self.matcher.api_answer_match(api_results, question)
                 if not match_result.get('haveAnswer'):
                     print('正在使用deepseek搜索中...',flush=True)
                     api_results =self.use_deepseek(question,question.API)

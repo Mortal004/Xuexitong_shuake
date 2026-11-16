@@ -42,10 +42,12 @@ ANALYSIS2 = "https://mobilelearn.chaoxing.com/pptSign/analysis2"
 
 # ---------------- 加解密 / 其他 ----------------
 AES_KEY = "u2oh6Vu^HWe4_AES"          # 本地保存密码 & fanyalogin 传输
-DEFAULT_AMAP_KEY = ""   # 地址->坐标(可用 config 覆盖)
+DEFAULT_AMAP_KEY = "2f8f9d1576876ea90e9fb8692859f9fc"   # 地址->坐标(可用 config 覆盖)
+ID='10023464'
 AMAP_GEOCODE_URL = "https://restapi.amap.com/v3/geocode/geo"
 
 # ---------------- 运行参数 ----------------
-CHECK_INTERVAL = 2          # 每 7 秒循环检查一次
+CHECK_INTERVAL = 7          # 每 7 秒循环检查一次
 COURSE_REFRESH_CYCLES = 30  # 每 30 轮刷新一次课程列表(约 3.5 分钟)
 REQUEST_INTERVAL = 0.25     # 定位修正时请求间隔
+MAX_MONITOR_TIME = 180       # 最大监控时间(秒)

@@ -233,7 +233,7 @@ def handle_video_error_alert(driver):
     except NoAlertPresentException:
         return
 
-def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen,API,video_title_choice,speed,pass_face):
+def check_vido_finish(driver,i,time_start,vido_iframe,lock_screen,API,video_title_choice,speed,pass_face,review):
     last_time = 0
     h = 0
     # 判断是否完成任务
@@ -251,11 +251,14 @@ def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen,API
         parent_element2_class = parent_element2.get_attribute("class")
         txt = element2.get_attribute('aria-label')
         # print(parent_element2_class, flush=True)
-        if txt == '任务点已完成' or 'ans-attach-ct ans-job-finished' in parent_element2_class:
+        if (txt == '任务点已完成' or 'ans-attach-ct ans-job-finished' in parent_element2_class) and not review:
             # pyautogui.scroll(-250)
             print(color.green(f'已完成第{i + 1}个视频'), flush=True)
             time_end = time.time()
             print(color.green('总共耗费了%.2f秒.' % (time_end - time_start)), flush=True)
+            sleep_time=random.randint(2,5)
+            print(color.yellow(f'等待{sleep_time}秒后开始下一个任务点'), flush=True)
+            time.sleep(sleep_time)
             break
         else:
             driver.switch_to.default_content()
@@ -265,9 +268,13 @@ def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen,API
             check_video_question(driver,API,video_title_choice)
             element = driver.find_element(By.CLASS_NAME, 'vjs-current-time-display')
             current_time = element.text
+            element = driver.find_element(By.CLASS_NAME, 'vjs-duration-display')
+            total_time = element.text
+            if total_time == '' or total_time == '0:00':
+                total_time='1'
             check_vido_play(driver, last_time, current_time,speed,pass_face,vido_iframe)
             last_time = current_time
-            if current_time == total_time:
+            if current_time == total_time and not review:
                 if h == 0:
                     h += 1
                     try:
@@ -281,12 +288,15 @@ def check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen,API
                     time_end = time.time()
                     print(color.green('总共耗费了%.2f秒.' % (time_end - time_start)), flush=True)
                     break
+            elif current_time == total_time and review:
+                print(color.yellow('视频已播放完毕'), flush=True)
+                break
             if lock_screen:
                 pyautogui.move(20, 0, )
                 pyautogui.move(-20, 0)
     return True
 
-def study_page(driver,course_name,lock_screen,API,video_title_choice,pass_vido,speed,pass_face):
+def study_page(driver,course_name,lock_screen,API,video_title_choice,pass_vido,speed,pass_face,review):
     global drag_progress_condition
     driver.switch_to.default_content()
     driver.switch_to.frame('iframe')
@@ -295,9 +305,12 @@ def study_page(driver,course_name,lock_screen,API,video_title_choice,pass_vido,s
         elements1 = driver.find_elements(By.CLASS_NAME, 'ans-job-icon-clear ')
         print(color.magenta(f'已检测到{len(elements1)}个视频包含有任务点'),flush=True)
     except:
-        pyautogui.scroll(-250)
-        print(color.green('视频已完成,点击下一节'),flush=True)
-        return
+        if review:
+            print(color.red('复习模式，重新刷视频'),flush=True)
+        else:
+            pyautogui.scroll(-250)
+            print(color.green('视频已完成,点击下一节'),flush=True)
+            return
 
     for i in range(len(elements1)):
         drag_progress_condition = True
@@ -311,7 +324,7 @@ def study_page(driver,course_name,lock_screen,API,video_title_choice,pass_vido,s
         except:
             txt = ''
             parent_element_class=''
-        if txt == '任务点未完成' and 'ans-attach-ct' in parent_element_class:
+        if (txt == '任务点未完成' and 'ans-attach-ct' in parent_element_class) or review:
             vido_iframe=element1.find_element(By.XPATH, "following-sibling::iframe[1]")
             driver.execute_script("arguments[0].scrollIntoView();", vido_iframe)
             driver.switch_to.frame(vido_iframe)
@@ -345,7 +358,6 @@ def study_page(driver,course_name,lock_screen,API,video_title_choice,pass_vido,s
             total_time=element.text
             if  total_time=='' or total_time=='0:00':
                 print(color.red('获取视频总时长失败'),flush=True)
-                total_time='1'
             else:
                 print(color.green(f'该视频总时长为：{total_time}'),flush=True)
             click_video_progress_end(driver,pass_vido)
@@ -354,7 +366,7 @@ def study_page(driver,course_name,lock_screen,API,video_title_choice,pass_vido,s
             driver.switch_to.frame('iframe')
             b = 0
             pause_start_time = 0  # 添加变量记录暂停开始时间
-            check_vido_finish(driver,i,time_start,total_time,vido_iframe,lock_screen,API,video_title_choice,speed,pass_face)
+            check_vido_finish(driver,i,time_start,vido_iframe,lock_screen,API,video_title_choice,speed,pass_face,review)
             save_record(driver, course_name, time, vido_iframe, '视频')
         driver.switch_to.default_content()
         # check_face(driver,driver.current_url,'popDiv1 wid640  faceCollectQrPopVideo  popClass faceRecognition_0')

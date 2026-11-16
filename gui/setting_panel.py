@@ -1,6 +1,6 @@
 """设置页面 — 配置、账号、功能、高级设置的全部 UI 和交互逻辑"""
-import json
 import tkinter as tk
+import webbrowser
 from tkinter import filedialog, messagebox
 import customtkinter as ctk
 from PIL import Image
@@ -95,6 +95,7 @@ class SettingsPanel:
         self._build_account_section(bg, c, f)
         self._build_function_section(bg, c, f)
         self._build_detail_section(bg, c, f)
+        self._build_more_settings_window()
 
         self.save_button = ctk.CTkButton(
             self.parent, text="💾 保存设置", command=self.save,
@@ -163,7 +164,7 @@ class SettingsPanel:
         self.radio_button_1.grid(row=1, column=1, columnspan=3, padx=12, pady=6, sticky="w")
         self.radio_button_2.grid(row=2, column=1, columnspan=3, padx=12, pady=6, sticky="w")
         self.radio_button_3.grid(row=3, column=1, columnspan=3, padx=12, pady=6, sticky="w")
-        self.function_set_frame = func
+        # self.function_set_frame = func
 
     def _build_detail_section(self, bg, c, f):
         det = ctk.CTkFrame(self.parent, corner_radius=12, border_width=1,
@@ -209,42 +210,127 @@ class SettingsPanel:
 
         self.API_label = ctk.CTkLabel(det, text="API Key:", font=f)
         self.API_entry = ctk.CTkEntry(det, show='*', corner_radius=6)
-        ToolTip(self.API_entry, "可通过赞助作者获取或者前往deepseek官网购买")
+        ToolTip(self.API_entry, "可前往deepseek官网购买获取")
         show_img = ctk.CTkImage(light_image=Image.open(r"task\img\show.png"), size=(16, 12))
         self.show_api_btn = ctk.CTkButton(det, text="", fg_color='transparent',
                                           image=show_img, command=self._show_api,
                                           font=f, width=5, height=10)
 
-        self.pass_face_label = ctk.CTkLabel(det, text="跳过人脸:", font=f)
-        self.pass_face_check = ctk.CTkSwitch(det, text="",)
-        ToolTip(self.pass_face_check, "只有当你的课程需要人脸认证时才开启")
-
-        self.multi_device_label = ctk.CTkLabel(det, text="多端学习:", font=f)
-        self.multi_device_check = ctk.CTkSwitch(det, text="",width=20,command=self._warn)
-        ToolTip(self.multi_device_check, "解除多端学习监控，可同时刷多门课程")
-
-        self.pass_vido_label = ctk.CTkLabel(det, text='秒过视频:', font=f)
-        self.pass_vido_check = ctk.CTkSwitch(det, text="", command=self._change_speed,)
-        ToolTip(self.pass_vido_check, "只有在视频可以拖动进度条的情况下\n才会有效")
-
-        self.lock_screen_label = ctk.CTkLabel(det, text="防锁屏:", font=f)
-        self.lock_screen_check = ctk.CTkSwitch(det, text="",width=20)
-
-        self.timer_label=ctk.CTkLabel(det,text='定时刷课:',font=f)
-        self.timer_check=ctk.CTkSwitch(det, text="",command=self.open_timer_window,)
+        self.more_settings_btn = ctk.CTkButton(
+            det, text="更多设置", font=("Microsoft YaHei", 13, "bold"),
+            fg_color='transparent',  text_color=c[0],hover_color=c[1],width=20,
+            command=self._open_more_settings)
+        ToolTip(self.more_settings_btn, "打开更多高级设置窗口")
 
         self.homework_label = ctk.CTkLabel(det, text="选择作业:", font=f)
         self.homework_entry = ctk.CTkComboBox(
             det, values=['手动选择', '自动选择'],
             dropdown_fg_color=bg, dropdown_hover_color=c[0], state='readonly',
             font=f, corner_radius=6, command=self._prompt, button_color=c[0])
+
+    def _build_more_settings_window(self):
+        c = self._colors
+        f = self._font
+        bg = self._theme_colors[1]
+        self.more_win = ctk.CTkToplevel(self.root)
+        self.more_win.title("更多设置")
+        self.more_win.geometry("390x220")
+        self.more_win.withdraw()
+        self.more_win.protocol("WM_DELETE_WINDOW", self.more_win.withdraw)
+        det = ctk.CTkFrame(self.more_win,  border_width=1,
+                           fg_color=c[1], border_color="#CBD5E1")
+        det.pack(fill="both", expand=True)
+        ctk.CTkLabel(det, text="🔧 更多设置", font=("Microsoft YaHei", 13, "bold")).grid(
+            row=0, column=0, columnspan=2, sticky="w", padx=12, pady=(8, 4))
+
+        self.pass_face_label = ctk.CTkLabel(det, text="跳过人脸:", font=f)
+        self.pass_face_check = ctk.CTkSwitch(det, text="",)
+        ToolTip(self.pass_face_check, "只有当你的课程需要人脸认证时才开启")
+
+        self.multi_device_label = ctk.CTkLabel(det, text="多端学习:", font=f)
+        self.multi_device_check = ctk.CTkSwitch(det, text="", width=20, command=self._warn)
+        ToolTip(self.multi_device_check, "解除多端学习监控，可同时刷多门课程")
+
+        self.pass_vido_label = ctk.CTkLabel(det, text='秒过视频:', font=f)
+        self.pass_vido_check = ctk.CTkSwitch(det, text="", command=self._change_speed)
+        ToolTip(self.pass_vido_check, "只有在视频可以拖动进度条的情况下\n才会有效")
+
+        self.lock_screen_label = ctk.CTkLabel(det, text="防锁屏:", font=f)
+        self.lock_screen_check = ctk.CTkSwitch(det, text="", width=20)
+
+        self.timer_label = ctk.CTkLabel(det, text='定时刷课:', font=f)
+        self.timer_check = ctk.CTkSwitch(det, text="", command=self.open_timer_window)
+
+        self.email_label = ctk.CTkLabel(det, text='邮箱通知:', font=f)
+        self.email_box = ctk.CTkFrame(det, fg_color='transparent')
+        self.email_check = ctk.CTkSwitch(self.email_box, text="",
+                                         command=self._toggle_email_notify, width=20)
+        self.email_check.pack(side='left')
+        self.email_config_btn = ctk.CTkButton(
+            self.email_box, text='⚙', width=20, height=24, corner_radius=6,
+            font=("Microsoft YaHei", 12), fg_color='transparent', hover_color='#E5E7EB',
+            text_color='#374151', command=self._open_email_dialog)
+        self.email_config_btn.pack(side='left', padx=(2, 0))
+        ToolTip(self.email_check, "开启后：开始刷课、完成一个章节、程序报错时都会发邮件提醒\n"
+                                  "点击右侧 ⚙ 可修改邮箱和授权码")
+        #复习模式
+        self.review_mode_label = ctk.CTkLabel(det, text='复习模式:', font=f)
+        self.review_mode_check = ctk.CTkSwitch(det, text="", width=20)
+        ToolTip(self.review_mode_check, "开启后：会从头开始学习所有任务点，可用于刷学习次数")
+
+        self.pass_face_label.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
+        self.pass_face_check.grid(row=1, column=2, padx=0, pady=5, sticky=tk.W)
+        self.multi_device_label.grid(row=1, column=3, padx=5, pady=5, sticky=tk.W)
+        self.multi_device_check.grid(row=1, column=4, padx=0, pady=5, sticky=tk.W)
+        self.pass_vido_label.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
+        self.pass_vido_check.grid(row=2, column=2, padx=0, pady=5, sticky=tk.W)
+        self.lock_screen_label.grid(row=2, column=3, padx=5, pady=5, sticky=tk.E)
+        self.lock_screen_check.grid(row=2, column=4, padx=0, pady=5, sticky=tk.W)
+        self.timer_label.grid(row=3, column=1, padx=5, pady=5, sticky=tk.W)
+        self.timer_check.grid(row=3, column=2, padx=0, pady=5, sticky=tk.W)
+        self.email_label.grid(row=3, column=3, padx=5, pady=5, sticky=tk.W)
+        self.email_box.grid(row=3, column=4, padx=0, pady=5, sticky=tk.W)
+        self.review_mode_label.grid(row=4, column=1, padx=5, pady=5, sticky=tk.W)
+        self.review_mode_check.grid(row=4, column=2, padx=0, pady=5, sticky=tk.W)
         self.detail_set_frame = det
+
+    def _open_more_settings(self):
+        self.more_win.deiconify()
+        self.more_win.lift()
 
     def open_timer_window(self):
         if self.timer_check.get():
             self._timer.open(self.timer_start_time, self.timer_end_time)
         else:
             self._timer.cancel()
+
+    # ---------- 邮箱通知 ----------
+    def _open_email_dialog(self):
+        """打开邮箱配置弹窗；返回是否保存成功"""
+        try:
+            from gui.email_dialog import EmailNotifyDialog
+        except Exception as exc:
+            messagebox.showerror('错误', f'无法加载邮箱配置窗口：{exc}')
+            return False
+        dialog = EmailNotifyDialog(self.root, self.config, self._font, self._colors)
+        ok = dialog.show()
+        if ok:
+            self.email_check.select()
+            # 配置弹窗直接写了磁盘，这里同步一下内存缓存
+            try:
+                self.config.load_account()
+            except Exception:
+                pass
+        return ok
+
+    def _toggle_email_notify(self):
+        """开关：开启时弹配置窗，取消则回退"""
+        if self.email_check.get():
+            if not self._open_email_dialog():
+                self.email_check.deselect()
+                self.config.save_email_config(enabled=0)
+        else:
+            self.config.save_email_config(enabled=0)
 
     def _warn(self):
         if self.multi_device_check.get():
@@ -331,16 +417,7 @@ class SettingsPanel:
             self.show_api_btn.grid(row=8, column=3, pady=self.pady, sticky=tk.W)
         self.speed_label.grid(row=9, column=1, padx=5, pady=self.pady, sticky=tk.W)
         self.speed_entry.grid(row=9, column=2, padx=5, pady=self.pady, sticky=tk.W)
-        self.pass_face_label.grid(row=10, column=1, padx=5, pady=5, sticky=tk.W)
-        self.pass_face_check.grid(row=10, column=2, padx=0, pady=5, sticky=tk.W)
-        self.multi_device_label.grid(row=10, column=2, padx=5, pady=5, sticky=tk.E)
-        self.multi_device_check.grid(row=10, column=3, padx=0, pady=5, sticky=tk.W)
-        self.pass_vido_label.grid(row=11, column=1, padx=5, pady=5, sticky=tk.W)
-        self.pass_vido_check.grid(row=11, column=2, padx=0, pady=5, sticky=tk.W)
-        self.lock_screen_label.grid(row=11, column=2, padx=5, pady=5, sticky=tk.E)
-        self.lock_screen_check.grid(row=11, column=3, padx=0, pady=5, sticky=tk.W)
-        self.timer_label.grid(row=12, column=1, padx=5, pady=self.pady, sticky=tk.W)
-        self.timer_check.grid(row=12, column=2, padx=0, pady=5, sticky=tk.W)
+        self.more_settings_btn.grid(row=10, column=1, padx=5, pady=self.pady, sticky=tk.W)
         self.homework_label.grid_forget()
         self.homework_entry.grid_forget()
 
@@ -359,11 +436,11 @@ class SettingsPanel:
         self.show_api_btn.grid(row=7, column=3, pady=self.pady, sticky=tk.W)
         self.homework_label.grid(row=9, column=1, padx=5, pady=self.pady, sticky=tk.W)
         self.homework_entry.grid(row=9, column=2, padx=5, pady=self.pady, sticky=tk.W)
-        for w in [self.speed_label, self.speed_entry, self.lock_screen_label,
-                  self.lock_screen_check, self.vido_question_label,
-                  self.vido_question_entry, self.discussion_label,
-                  self.discussion_entry, self.pass_vido_label, self.pass_vido_check]:
+        for w in [self.speed_label, self.speed_entry,
+                  self.vido_question_label, self.vido_question_entry,
+                  self.discussion_label, self.discussion_entry]:
             w.grid_forget()
+        self._turn_money()
 
     def shua_ti_choice(self, event=None):
         if self.question_entry.get() == '随机答题' and event not in ('视频题目', '讨论'):
@@ -449,16 +526,17 @@ class SettingsPanel:
         account['pass_vido'] = self.pass_vido_check.get()
         account['lock_screen'] = self.lock_screen_check.get()
         account['radio_var'] = self.radio_var.get()
+        account['email_notify'] = int(self.email_check.get())
+        account['review']=int(self.review_mode_check.get())
 
-        if messagebox.askokcancel('确认保存', '你确定要保存吗？\n(使用DeepSeek可支持全题型作答)'):
-            if self.config.save_account(account):
-                self.config.save_courses(account['phone_number'], courses)
-                messagebox.showinfo('', '保存成功')
-                self.change_font()
-                self.change_text_box(self.all_courses,self.multi_device_check.get())
-                self.root.update()
-            else:
-                messagebox.showerror('警告', '保存失败，请以管理员权限运行')
+        if self.config.save_account(account):
+            self.config.save_courses(account['phone_number'], courses)
+            messagebox.showinfo('', '保存成功')
+            self.change_font()
+            self.change_text_box(self.all_courses,self.multi_device_check.get())
+            self.root.update()
+        else:
+            messagebox.showerror('警告', '保存失败，请以管理员权限运行')
 
     def _validate(self):
         checks = [
@@ -522,7 +600,7 @@ class SettingsPanel:
         self.radio_var.set(account.get('radio_var', 1))
         for attr, key in [('pass_face_check', 'pass_face'), ('multi_device_check', 'multi_device'),
                           ('pass_vido_check', 'pass_vido'), ('lock_screen_check', 'lock_screen'),
-                          ('timer_check', 'timer_active')]:
+                          ('timer_check', 'timer_active'), ('email_check', 'email_notify'),('review_mode_check', 'review')]:
             getattr(self, attr).select() if account.get(key, 0) else getattr(self, attr).deselect()
         try:
             self.API_entry.insert(0, account.get('API', ''))
@@ -543,8 +621,9 @@ class SettingsPanel:
 
     @property
     def switches(self):
-        return [self.topmost_check, self.pass_face_check,self.timer_check,
-                self.multi_device_check, self.lock_screen_check, self.pass_vido_check]
+        return [self.topmost_check, self.pass_face_check, self.timer_check,self.review_mode_check,
+                self.multi_device_check, self.lock_screen_check, self.pass_vido_check,
+                self.email_check]
 
     @property
     def buttons(self):

@@ -17,7 +17,9 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium import webdriver
 
+from task.finish_vote import finish_vote
 from task.tool.common import save_process
+from core.config_manager import ConfigManager
 from task.tool.face import get_cookie,auto_login_with_cookies,delete_face_popup
 from task.finish_dicussion import finish_discussion
 from task.play_audio import play_audio
@@ -27,6 +29,7 @@ from task.watch_ppt import __ppt
 from task.watch_vido import study_page
 from task.quiz_ai import  finish_quiz
 from task.tool.send_wx import send_error
+from task.tool import mailer
 from task.do_work import do_work
 from task.reading import reading
 from task.tool.disable_monitor import DisableMonitor
@@ -137,7 +140,7 @@ def choice_course(driver, course_name,speed,task_type,phone_number):
             time.sleep(0.5)  # 稍等滚动动画完成
             element.click()
             time.sleep(1)
-        except NoSuchElementException:
+        except NoSuchElementException and ElementNotInteractableException:
             try:
                 driver.find_element(By.CSS_SELECTOR, '[title*="首页"]').click()
                 time.sleep(1)
@@ -227,7 +230,7 @@ def new_find_mission(driver,speed):
         time.sleep(2)
         new_find_mission(driver,speed)
 
-def find_mission(driver,task_type,speed,course_name):
+def find_mission(driver,task_type,speed,course_name,review):
     # 点击开始学习
     try:
         element = driver.find_element(By.CSS_SELECTOR,'[class="start-study readclosecoursepop"]')
@@ -238,7 +241,13 @@ def find_mission(driver,task_type,speed,course_name):
     # 点击章节/作业标签
     elements=driver.find_elements(By.CLASS_NAME, 'nav_content')
     if not elements:
-       driver.find_element(By.CSS_SELECTOR, "li[data-nav-name='章节']").click()
+        try:
+            driver.find_element(By.CSS_SELECTOR, "li[data-nav-name='章节']").click()
+        except:
+            try:
+                driver.find_element(By.CSS_SELECTOR, '[data-nav-id="2"]').click()
+            except:
+                print(color.red('如该课程存在人脸识别，请检查是否开启跳过人脸功能，可在设置页面的更多设置中打开'),flush=True)
     for element in elements:
         if element.text== task_type:
             element.click()
@@ -256,12 +265,16 @@ def find_mission(driver,task_type,speed,course_name):
     if task_type == '作业':
         return True
     try:
-        # 查找待完成任务点的元素
-        element = driver.find_element(By.CSS_SELECTOR, '.catalog_tishi120')
+        if review:
+            #查找第一个任务点
+            element=driver.find_element(By.CLASS_NAME, 'catalog_tishi56')
+        else:
+            # 查找待完成任务点的元素
+            element = driver.find_element(By.CSS_SELECTOR, '.catalog_tishi120')
     except:
         driver.switch_to.default_content()
         iframes=driver.find_elements(By.TAG_NAME, 'iframe')
-        print(len(iframes))
+        # print(len(iframes))
         for iframe in iframes:
             driver.switch_to.frame(iframe)
             try:
@@ -271,11 +284,11 @@ def find_mission(driver,task_type,speed,course_name):
                 driver.switch_to.default_content()
                 continue
         else:
-            print(color.red('所有任务点均已完成'),flush=True)
+            print(color.red('所有任务点均已完成，如需刷学习时长或次数，请在设置页面开启复习模式'),flush=True)
             return False
     refresh_process(driver,course_name)
     # 打印提示信息，表示已检测到未完成点
-    print(color.magenta('已检测到未完成点'),flush=True)
+    print(color.magenta('已检测到任务点'),flush=True)
     time.sleep(0.5)
     #滚动到未完成的任务点的位置
     driver.execute_script("arguments[0].scrollIntoView();", element)
@@ -288,13 +301,214 @@ def refresh_process(driver,course_name):
     try:
         process_text=driver.find_element(By.CLASS_NAME, 'xs_head_name').text.strip()
         # 分别提取两个数字
-        match = re.search(r'已完成任务点:\s*(\d+)/(\d+)', process_text)
+        match = re.search(r'已完成任务点\s*[:：]\s*(\d+)\s*/\s*(\d+)', process_text)
         if match:
             done = int(match.group(1))  # 7
             total = int(match.group(2))  # 17
             save_process(course_name,done,total)
     except Exception as r:
         print(color.red(f'刷新进度失败'), flush=True)
+
+# ==================== 邮箱通知辅助 ====================
+def _mail_notify(func, *args):
+    """发送通知；任何异常都只打印，不影响刷课"""
+    try:
+        return func(*args)
+    except Exception as exc:
+        print(color.yellow(f'[邮箱] 通知发送异常：{exc}'), flush=True)
+        return False
+
+
+def _course_context(account_info):
+    """邮件里标明是哪门课出的问题（多端模式下每门课一个进程）"""
+    try:
+        courses = (account_info or {}).get('cour') or []
+        return '、'.join(str(c) for c in courses)
+    except Exception:
+        return ''
+
+def _section_task_stats(driver):
+    """统计当前小节的任务点，返回 (总数, 已完成数)"""
+    total = done = 0
+    try:
+        driver.switch_to.default_content()
+        try:
+            driver.switch_to.frame('iframe')
+        except Exception:
+            return 0, 0
+        icons = driver.find_elements(By.CSS_SELECTOR, '[class*="ans-job-icon"]')
+        total = len(icons)
+        for icon in icons:
+            try:
+                parent_class = icon.find_element(By.XPATH, '..').get_attribute('class') or ''
+                label = icon.get_attribute('aria-label') or ''
+                if 'ans-job-finished' in parent_class or '已完成' in label:
+                    done += 1
+            except Exception:
+                continue
+    except Exception:
+        return 0, 0
+    finally:
+        try:
+            driver.switch_to.default_content()
+        except Exception:
+            pass
+    return total, done
+
+def _current_chapter_name(driver):
+    """当前小节标题（学习页右上角的章节名）"""
+    try:
+        driver.switch_to.default_content()
+        element = driver.find_element(By.CLASS_NAME, 'prev_title')
+        return (element.get_attribute('title') or element.text or '').strip()
+    except Exception:
+        return ''
+
+def _course_progress(course_name):
+    """
+    课程进度：直接读 course_process.json（和 GUI 里课程进度用的是同一份数据）
+    返回 (已完成任务点, 总任务点) 或 None
+    """
+    try:
+        from core.config_manager import ConfigManager
+        data = ConfigManager().get_course_process()
+        if course_name in data:
+            done, total = data[course_name]
+            return int(done), int(total)
+    except Exception:
+        pass
+    return None
+
+
+def _chapter_tabs(driver):
+    """本章的小节 tab（#prev_tab 下的 li 列表）"""
+    driver.switch_to.default_content()
+    prev_tab = driver.find_element(By.ID, 'prev_tab')
+    return prev_tab.find_elements(By.TAG_NAME, 'li')
+
+
+def _chapter_key(driver):
+    """用本章小节 tab 的文本组合作为章节标识，切章节后会变"""
+    try:
+        names = []
+        for tab in _chapter_tabs(driver):
+            names.append((tab.text or tab.get_attribute('title') or '').strip())
+        return '|'.join(names)
+    except Exception:
+        return ''
+
+
+def _current_section_index(driver):
+    """当前小节在 tab 里的序号（找不到返回 -1）"""
+    try:
+        for index, tab in enumerate(_chapter_tabs(driver)):
+            if 'active' in (tab.get_attribute('class') or ''):
+                return index
+    except Exception:
+        pass
+    return -1
+
+
+def _current_section_name(driver):
+    """当前小节名称"""
+    try:
+        for tab in _chapter_tabs(driver):
+            if 'active' in (tab.get_attribute('class') or ''):
+                return (tab.text or '').strip()
+    except Exception:
+        pass
+    return ''
+
+
+# 本章任务点累计：{章节标识: {小节序号: (总数, 已完成数)}}
+_chapter_tracker = {'key': None, 'sections': {}, 'progressed': False}
+
+
+def _record_chapter_section(driver, before_done, after_total, after_done,
+                            before_course=None, after_course=None):
+    """
+    把本节的任务点情况记到当前章节下：
+      * 章节变了就重置累计；
+      * 同一小节重复进入时用新数据覆盖，避免重复计数；
+      * 本节完成数比进入时多（或课程任务点总数增加），就认为本章被脚本完成过任务点。
+    """
+    try:
+        key = _chapter_key(driver)
+        if _chapter_tracker['key'] != key:
+            _chapter_tracker['key'] = key
+            _chapter_tracker['sections'] = {}
+            _chapter_tracker['progressed'] = False
+        index = _current_section_index(driver)
+        if index < 0:
+            index = _current_section_name(driver) or 'unknown'
+        _chapter_tracker['sections'][index] = (after_total, after_done)
+
+        progressed = after_done > before_done
+        # 有些任务点（如 PPT）完成后图标刷新有延迟，用课程任务点总数变化兜底
+        if before_course and after_course and after_course[0] > before_course[0]:
+            progressed = True
+        if progressed:
+            _chapter_tracker['progressed'] = True
+    except Exception:
+        pass
+
+
+def _chapter_task_stats(driver):
+    """本章任务点完成情况：累加本章已处理过的小节"""
+    try:
+        sections = _chapter_tracker.get('sections') or {}
+        total = sum(item[0] for item in sections.values())
+        done = sum(item[1] for item in sections.values())
+        if total > 0:
+            return done, total
+    except Exception:
+        pass
+    return _section_task_stats(driver)
+
+
+_notified_chapters = set()
+
+
+def check_chapter(driver):
+    """检查是否为章节的最后一小节"""
+    try:
+        tabs = _chapter_tabs(driver)
+        if not tabs:
+            return False
+        return (tabs[-1].get_attribute('class') or '') == 'active'
+    except Exception:
+        return False
+
+
+def notify_chapter_finished(driver, course_name):
+    """
+    跳转下一节之前调用：
+      * 只有当前是本章最后一小节（再点下一节就进入下一章）才提醒；
+      * 只要本次运行完成过本章任意一个任务点就提醒；
+      * 同一门课的同一章节只提醒一次。
+    """
+    try:
+        if not mailer.is_enabled():
+            return False
+        if not check_chapter(driver):
+            return False
+        if not _chapter_tracker.get('progressed'):
+            return False
+        chapter = _current_chapter_name(driver) or '未命名章节'
+        key = (course_name, chapter)
+        if key in _notified_chapters:
+            return False
+        done, total = _chapter_task_stats(driver)
+        if total <= 0:
+            return False
+        section = _current_section_name(driver)
+        progress = _course_progress(course_name)
+        _notified_chapters.add(key)
+        _chapter_tracker['progressed'] = False
+        return _mail_notify(mailer.notify_chapter, course_name, chapter,
+                            done, total, progress, section)
+    except Exception:
+        return False
 
 def turn_page(driver,page_name):
     time.sleep(1)
@@ -353,6 +567,7 @@ def page_message(driver):
         ('音频', By.CSS_SELECTOR, '[class="ans-attach-online ans-insertaudio"]'),
         ('阅读', By.CSS_SELECTOR, '[class="ans-attach-online ans-book"]'),
         ('阅读', By.CSS_SELECTOR, '[src^="/ananas/modules/read/indexV2.html"]'),
+        ('问卷', By.CSS_SELECTOR, '[src^="/ananas/modules/zt/vote/index-pc-new.html"]')
     ]
 
     driver.switch_to.default_content()
@@ -380,14 +595,17 @@ def page_message(driver):
 
     return page_message_dict
 
+course_finished = False
 def click_next_page(driver, pass_face):
     """点击下一页按钮，处理各种异常情况"""
-    global error_num
+    global error_num, course_finished
+    course_finished = False
     NEXT_PAGE_XPATH = '//*[@id="prevNextFocusNext"]'
     try:
         driver.find_element(By.XPATH, NEXT_PAGE_XPATH).click()
         return True
     except ElementNotInteractableException:
+        course_finished = True
         print(color.red('🎉 🎉 该课程全部已完结，撒花！！！'), flush=True)
         return False
     except ElementClickInterceptedException:
@@ -401,6 +619,8 @@ def click_next_page(driver, pass_face):
         error_num+=1
         if error_num==6:
             print(color.red('❌ 出错次数过多'), flush=True)
+            _mail_notify(mailer.notify_error, '连续出错次数过多',
+                         '点击「下一节」连续失败 6 次，已停止本门课程')
             return False
         try:
             driver.find_element(By.XPATH, NEXT_PAGE_XPATH).click()
@@ -417,22 +637,26 @@ chapter_name=''
 def check_chapter_active(driver,multi_device):
     """判断该章节是否正在被学习"""
     global chapter_name
+    record_path = fr'task\record\studying_record.txt'
     if not multi_device:
         return True
-    element = driver.find_element(By.CLASS_NAME, 'prev_title')
-    chapter_name = element.get_attribute('title')
-    record_path = fr'task\record\studying_record.txt'
-    marker = f'正在刷{chapter_name}...\n'
     try:
-        with open(record_path, 'r', encoding='utf-8') as f:
+        element = driver.find_element(By.CLASS_NAME, 'prev_title')
+        chapter_name = element.get_attribute('title')
+        marker = f'正在刷{chapter_name}...\n'
+        with open(record_path, 'a+', encoding='utf-8') as f:
+            f.seek(0)
             if marker in f.read():
                 print(color.yellow(f'检测到{chapter_name}章节正在学习中，跳过'), flush=True)
-                return False
+            else:
+                f.write(marker)
+                return True
     except FileNotFoundError:
         pass
-    with open(record_path, 'a', encoding='utf-8') as f:
-        f.write(marker)
-    return True
+    except NoSuchElementException:
+        print(color.red('章节名称未找到，自动跳过该章节'), flush=True)
+
+    return False
 
 def delete_record():
     """删除该章节的正在学习记录"""
@@ -450,12 +674,17 @@ def delete_record():
         f.write(content)
 
 def run(driver,choice,course_name,API,lock_screen,pass_face,video_title_choice,
-        discussion_choice,after_finish_question,pass_vido,speed,multi_device):
+        discussion_choice,after_finish_question,pass_vido,speed,multi_device,review):
     while True:
         cond=True
+        before_done = 0
+        before_course = None
         delete_face_popup(driver,pass_face)
         if check_chapter_active(driver,multi_device):
             print(color.green('正在检测页面内容'), flush=True)
+            # 记录本节进入时的任务点状态，用于判断本章是否有任务点被完成
+            _before_total, before_done = _section_task_stats(driver)
+            before_course = _course_progress(course_name)
             page_message_dict=page_message(driver)
             if len(page_message_dict)==0:
                 print(color.red('该页面无法识别'),flush=True)
@@ -475,9 +704,11 @@ def run(driver,choice,course_name,API,lock_screen,pass_face,video_title_choice,
 
                 if '阅读' in page_message_dict.keys():
                     reading(driver,page_message_dict['阅读'],course_name)
+                if '问卷' in page_message_dict.keys():
+                    finish_vote(driver,page_message_dict['问卷'],course_name)
                 if '视频' in page_message_dict.keys():
                     try:
-                        study_page(driver,course_name,lock_screen,API,video_title_choice,pass_vido,speed,pass_face)
+                        study_page(driver,course_name,lock_screen,API,video_title_choice,pass_vido,speed,pass_face,review)
                     except Exception as e:
                         driver.refresh()
                         print(color.red('出错了，刷新一下'),flush=True)
@@ -488,10 +719,23 @@ def run(driver,choice,course_name,API,lock_screen,pass_face,video_title_choice,
                     else:
                         print(color.yellow('您已选择不刷题，即将跳过测试题'),flush=True)
             delete_record()
+            # 记录本节处理后的任务点情况到当前章节
+            try:
+                after_total, after_done = _section_task_stats(driver)
+                after_course = _course_progress(course_name)
+                _record_chapter_section(driver, before_done, after_total, after_done,
+                                        before_course, after_course)
+            except Exception:
+                pass
         driver.switch_to.default_content()
         if cond:
             print(color.green('跳转下一页'), flush=True)
+            # 点下一节前判断：如果是本章最后一节且本章有任务点被完成，就发章节提醒
+            notify_chapter_finished(driver, course_name)
             if not click_next_page(driver, pass_face):
+                if course_finished:
+                    _mail_notify(mailer.notify_course_done, course_name,
+                                 _course_progress(course_name))
                 break
             # 确认
             try:
@@ -530,11 +774,18 @@ def start_browser(browser,driver_path,speed):
     driver.implicitly_wait(2)
     return driver
 
-def main(browser, driver_path, phone_number, password, choice, course_lst,API,after_finish_question,
-         lock_screen,speed, task_type,homework,pass_face,video_title_choice,discussion_choice,pass_vido,multi_device):
+
+
+def main(browser, driver_path, phone_number, password, choice, course_lst,API,after_finish_question,lock_screen,
+         speed, task_type,homework,pass_face,video_title_choice,discussion_choice,pass_vido,multi_device,review):
     driver = start_browser(browser, driver_path,speed)
     # time.sleep(20)
     login_study(driver, phone_number, password)
+    # 登录成功后通知：已开始刷课
+    # 多端模式下每门课一个子进程、会陆续启动，由 GUI 在最后一门课启动时统一发一封，
+    # 这里就不再各自发信了（否则会收到"开始刷课"×课程数）。
+    if not multi_device:
+        _mail_notify(mailer.notify_start, course_lst, task_type)
     for course_name in course_lst:
         delete_record()
         choice_course(driver, course_name, speed,  task_type,phone_number)
@@ -542,21 +793,26 @@ def main(browser, driver_path, phone_number, password, choice, course_lst,API,af
         experience(driver)
         delete_face_popup(driver,pass_face,course_name)
 
-        if find_mission(driver,task_type,speed,course_name):
+        if find_mission(driver,task_type,speed,course_name,review):
             if task_type=='作业':
                 do_work(driver,course_name,homework,API)
-                return
-            turn_page(driver, '学生学习页面')
+                # return
+            else:
+                turn_page(driver, '学生学习页面')
 
-            if multi_device:
-                monitor = DisableMonitor(driver)
-                monitor.enable()
+                if multi_device:
+                    monitor = DisableMonitor(driver)
+                    monitor.enable()
 
-            delete_face_popup(driver,pass_face)
-            fold(driver)
-            pyautogui.hotkey('ctrl', 'm')
-            run(driver, choice, course_name, API, lock_screen, pass_face,video_title_choice,discussion_choice,
-                after_finish_question,pass_vido,speed,multi_device)
+                delete_face_popup(driver,pass_face)
+                fold(driver)
+                pyautogui.hotkey('ctrl', 'm')
+                run(driver, choice, course_name, API, lock_screen, pass_face,video_title_choice,discussion_choice,
+                after_finish_question,pass_vido,speed,multi_device,review)
+        elif task_type != '作业':
+            # find_mission 返回 False 说明该课程所有任务点都已完成
+            print(color.green(f'{course_name} 所有任务点均已完成'), flush=True)
+            _mail_notify(mailer.notify_course_done, course_name, _course_progress(course_name))
         driver.close()
         turn_page(driver, '个人空间')
 
@@ -641,40 +897,51 @@ def parse_versions_from_text(error_text):
     elif versions['browser_type'] == 'Microsoft Edge Web':
         print("  • Edge驱动: https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/")
         print("  • Edge浏览器: https://www.microsoft.com/edge")
-    print('\n具体操作步骤见用户须知')
+    print('\n具体操作步骤见官网:https://github.com/Mortal004/xuexitong-tutorial/')
 
     return versions
 
 def run_main():
+    account_info = {}
     try:
-        with open(r'task/tool/account_info.json', 'r', encoding='utf-8') as fil:
-            account_info = json.load(fil)
+        # 用 ConfigManager 读配置：多端模式下 GUI 会反复重写该文件，
+        # 直接 open+json.load 可能读到写了一半的内容。
+        account_info = ConfigManager().load_account()
+        if not account_info:
+            raise Exception('读取 account_info.json 失败，请重新保存设置后再试')
         main(account_info['browser'], account_info['driver_path'], account_info['phone_number'], account_info['password'],
              account_info['choice'], account_info['cour'],account_info['API'],account_info['after_finish_question'],
              account_info['lock_screen'],account_info['speed'],account_info['task_type'],account_info['homework'],
              account_info['pass_face'],account_info['video_title_choice'],account_info['discussion_choice'],
-             account_info['pass_vido'],account_info['multi_device'])
+             account_info['pass_vido'],account_info['multi_device'],account_info['review'])
     except NoSuchWindowException as e:
         print(color.red('❌ 窗口意外关闭'),flush=True)
+        _mail_notify(mailer.notify_error, '窗口意外关闭', traceback.format_exc(),
+                     _course_context(account_info))
     except SessionNotCreatedException as e:
         error_msg = traceback.format_exc()
         send_error(
-            "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n" + error_msg)
+            "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行前往官网查看解决办法自行解决\n" + error_msg)
+        _mail_notify(mailer.notify_error, '浏览器驱动异常', error_msg, _course_context(account_info))
         # 执行分析
         result = parse_versions_from_text(error_msg)
 
     except WebDriverException as e:
         if 'ERR_INTERNET_DISCONNECTED' in str(e) or 'ERR_NAME_NOT_RESOLVED' in str(e):
             print(color.red('❌ 你网都没连，刷个屁的课啊'),flush=True)
+            _mail_notify(mailer.notify_error, '网络未连接', str(e), _course_context(account_info))
         else:
             print(color.red('❌ 出错了，具体原因请前往错误日志查看'),flush=True)
             error_msg = traceback.format_exc()
-            send_error("\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n"+error_msg)
+            send_error("\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行前往官网查看解决办法自行解决\n"+error_msg)
+            _mail_notify(mailer.notify_error, '浏览器运行异常', error_msg, _course_context(account_info))
     except PermissionError:
         print(color.red('请关闭该窗口后，再右键点击刷课程序用管理员权限打开'))
+        _mail_notify(mailer.notify_error, '权限不足', '请以管理员权限运行程序', _course_context(account_info))
     except Exception as e:
         error_msg = traceback.format_exc()
-        send_error("\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n"+error_msg)
+        send_error("\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行前往官网查看解决办法自行解决\n"+error_msg)
+        _mail_notify(mailer.notify_error, '程序异常', error_msg, _course_context(account_info))
         print(color.red('❌ 出错了，具体原因请前往错误日志查看'),flush=True)
 
 if __name__ == '__main__':

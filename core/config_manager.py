@@ -1,5 +1,7 @@
 """配置读写管理器，统一管理 account_info.json 和 course_name.json 的读写"""
 import json
+import os
+import time
 
 class ConfigManager:
     ACCOUNT_PATH = r'task/tool/account_info.json'
@@ -13,19 +15,37 @@ class ConfigManager:
 
     # ========== 账户信息 ==========
     def load_account(self) -> dict:
-        try:
-            with open(self.ACCOUNT_PATH, 'r', encoding='utf-8') as f:
-                self._account_info = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            self._account_info = {}
+        # 多端模式下 GUI 会不断重写 account_info.json，子进程可能读到写了一半的文件；
+        # 这里重试几次，避免因为偶发的 JSONDecodeError 把邮箱配置当成"未开启"。
+        for attempt in range(4):
+            try:
+                with open(self.ACCOUNT_PATH, 'r', encoding='utf-8') as f:
+                    self._account_info = json.load(f)
+                return self._account_info
+            except FileNotFoundError:
+                self._account_info = {}
+                return self._account_info
+            except json.JSONDecodeError:
+                if attempt < 3:
+                    time.sleep(0.08)
+        self._account_info = {}
         return self._account_info
+
+    @staticmethod
+    def _atomic_write(path, data):
+        """先写临时文件再替换，避免其它进程读到半个 JSON"""
+        tmp = f'{path}.{os.getpid()}.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
 
     def save_account(self, account_info: dict) -> bool:
         try:
-            with open(self.ACCOUNT_PATH, 'w', encoding='utf-8') as f:
-                json.dump(account_info, f, ensure_ascii=False, indent=2)
+            self._atomic_write(self.ACCOUNT_PATH, account_info)
             return True
-        except PermissionError:
+        except (PermissionError, OSError):
             return False
 
     def get_account(self) -> dict:
@@ -50,6 +70,64 @@ class ConfigManager:
         data[phone_number] = list(set(existing + courses))
         with open(self.COURSE_PATH, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+
+    # ========== 邮箱通知 ==========
+    EMAIL_FIELDS = {
+        'enabled': 'email_notify',
+        'provider': 'email_provider',
+        'account': 'email_account',
+        'auth_code': 'email_auth_code',
+        'receiver': 'email_receiver',
+        'host': 'email_smtp_host',
+        'port': 'email_smtp_port',
+        'use_ssl': 'email_use_ssl',
+    }
+
+    def get_email_config(self) -> dict:
+        """读取邮箱通知配置（auth_code 为落盘原值，由 mailer 负责解码）"""
+        account = self.load_account()
+
+        def _int(key, default=0):
+            try:
+                return int(account.get(key, default) or 0)
+            except (TypeError, ValueError):
+                return default
+
+        return {
+            'enabled': _int('email_notify', 0),
+            'provider': account.get('email_provider') or 'QQ邮箱',
+            'account': account.get('email_account') or '',
+            'auth_code': account.get('email_auth_code') or '',
+            'receiver': account.get('email_receiver') or '',
+            'host': account.get('email_smtp_host') or '',
+            'port': _int('email_smtp_port', 0),
+            'use_ssl': _int('email_use_ssl', 1),
+        }
+
+    def save_email_config(self, **kwargs) -> bool:
+        """只更新邮箱相关字段，不动其它配置"""
+        data = {}
+        for attempt in range(3):
+            try:
+                with open(self.ACCOUNT_PATH, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                break
+            except FileNotFoundError:
+                data = {}
+                break
+            except json.JSONDecodeError:
+                if attempt < 2:
+                    time.sleep(0.08)
+        for key, value in kwargs.items():
+            field = self.EMAIL_FIELDS.get(key)
+            if field:
+                data[field] = value
+        try:
+            self._atomic_write(self.ACCOUNT_PATH, data)
+        except (PermissionError, OSError):
+            return False
+        self._account_info = data
+        return True
 
     # ========== 便捷方法 ==========
     def get_version(self) -> str:

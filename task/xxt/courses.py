@@ -90,6 +90,8 @@ def get_ongoing_activities(client: XXTClient, course: Course) -> List[Activity]:
         "%s?fid=0&courseId=%s&classId=%s" % (constants.ACTIVE_LIST,
                                              course.course_id, course.class_id),
         ua="ios")
+    if root.get("errorMsg",'')=='请勿频繁操作':
+        raise Exception("操作过于频繁，请稍后再试")
     data = _unwrap(root or {})
     acts: List[Activity] = []
     for entry in (data.get("activeList") or []):

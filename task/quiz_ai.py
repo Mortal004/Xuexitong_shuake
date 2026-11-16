@@ -11,7 +11,7 @@ import traceback
 from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 
-from task.tool.common import turn_page, Common
+from task.tool.common import turn_page, Common, save_process
 from task.tool.no_secret import DecodeSecret
 from task.tool import color
 import sys
@@ -38,6 +38,8 @@ class Answer:
         self.API_KEY=api
         self.work_choice=work_choice
         self.turn_page=turn_page
+        self.typ_dict = {'单选题': 0, '多选题': 1, '填空题': 2, '判断题': 3, '简答题': 9, '论述题': 9,
+                         '名词解释': 9}
         # 使用正则表达式提取百分比数字
         match = re.search(r'(\d+)%', after_finish_question)
         if match:
@@ -152,7 +154,7 @@ class Answer:
                 print(color.green('\n<===================  分隔线  ===================>\n'), flush=True)
                 try:
                     self.answer_list = asyncio.run(
-                        main(self.questionType_list[i], self.only_title_text[i], self.num_option_dit[i], self.API_KEY,self.driver))
+                        main(self.questionType_list[i], self.only_title_text[i], self.num_option_dit[i], self.API_KEY))
                 except Exception as e:
                     print(color.red(f'第{i+1}题搜索失败：{e}'), flush=True)
 
@@ -161,9 +163,12 @@ class Answer:
                 if not self.answer_list:
                     try:
                         self.answer_list = asyncio.run(
-                            main(self.questionType_list[i], self.only_title_text[i], self.num_option_dit[i], self.API_KEY,self.driver))
+                            main(self.questionType_list[i], self.only_title_text[i], self.num_option_dit[i], self.API_KEY))
                     except Exception as e:
-                        print(color.red(f'第{i+1}题搜索失败：{e}'), flush=True)
+                        if 'Insufficient Balance' in str(e):
+                            print(color.red(f'第{i+1}题搜索失败,余额不足'), flush=True)
+                        else:
+                            print(color.red(f'第{i+1}题搜索失败：{e}'), flush=True)
                     if type(self.answer_list) is str:
                         self.answer_list = eval(self.answer_list)
             elif self.work_choice!='随机答题':
@@ -224,7 +229,6 @@ class Answer:
                     print(color.red('已回答，无需重复回答'),flush=True)
                 else:
                     self.all_optionWebElementList[title_num][option_num].click()
-                return True
             elif self.questionType_list[title_num] == '多选题':
                 self.answer_num=[]
                 if len(answer)==1:
@@ -247,7 +251,6 @@ class Answer:
                             self.all_optionWebElementList[title_num][ans].click()
                     except:
                         self.all_optionWebElementList[title_num][ans].click()
-                return True
 
             elif self.questionType_list[title_num]=='简答题' or self.questionType_list[title_num]=='论述题' or self.questionType_list[title_num]=='名词解释':
                 text_frame=self.questionList0[title_num].find_element(By.TAG_NAME,'iframe')
@@ -256,13 +259,11 @@ class Answer:
                 check_answer = p_element.text
                 if check_answer != '':
                     print(color.red('已回答，无需重复回答'), flush=True)
-                    self.driver.switch_to.parent_frame()
-                    return True
-                # self.driver.execute_script('arguments[0].innerText = arguments[1];', p_element, answer)
-                p_element.click()
-                p_element.send_keys(answer)
+                else:
+                    # self.driver.execute_script('arguments[0].innerText = arguments[1];', p_element, answer)
+                    p_element.click()
+                    p_element.send_keys(answer)
                 self.driver.switch_to.parent_frame()
-                return True
             elif self.questionType_list[title_num]=='填空题':
                 if self.work_choice is not None:
                     elements = self.questionList0[title_num].find_elements(By.CLASS_NAME, 'InpDIV')
@@ -299,6 +300,7 @@ class Answer:
             else:
                 print(color.red(f'该题为{self.questionType}，暂时无法作答'), flush=True)
                 return False
+            return True
         except Exception as e:
             print(color.red(f'答题时出错了{e}'), flush=True)
             return False
@@ -347,7 +349,7 @@ class Answer:
         return True
 
     def save_score(self):
-        # save_process(self.course_name)
+        save_process(self.course_name)
         element = self.driver.find_element(By.CLASS_NAME, 'prev_title')
         title = element.get_attribute('title')
         self.driver.switch_to.frame('iframe')
@@ -391,26 +393,5 @@ class Quiz(Common):
             turn_page(self.driver,'学生学习页面')
             time.sleep(15)
 def finish_quiz(driver, course_name, API, choice,after_finish_question):
-    # driver.switch_to.default_content()
-    # driver.switch_to.frame('iframe')
-    # test_frames = driver.find_elements(By.XPATH,
-    #                                    '//iframe[@src="/ananas/modules/work/index.html?v=2025-1028-1629&castscreen=0"]')
-    # print(color.magenta(f'已检测到{len(test_frames)}个测试'), flush=True)
-    # i=0
-    # for test_frame in test_frames:
-    #     if i!=0:
-    #         driver.switch_to.default_content()
-    #         driver.switch_to.frame('iframe')
-    #     print(f'当前处理第{i+1}个测试', flush=True)
-    #     i+=1
-    #     try:
-    #         Answer(driver, test_frame, course_name, API, choice,after_finish_question)
-    #     except:
-    #         error_msg = traceback.format_exc()
-    #         send_error(
-    #             "\n作者只解决打赏用户提交的问题，请在赞助后将截图与报错信息一同发送至作者邮箱2022865286@qq.com,未赞助的用户请自行查看用户须知文件自行解决\n" + error_msg)
-    #         print(color.yellow('出错了，具体原因请前往错误日志查看，请自行保存或提交,15秒后继续'), flush=True)
-    #         turn_page(driver,'学生学习页面')
-    #         time.sleep(15)
     quiz=Quiz(driver, course_name, API, choice,after_finish_question)
     quiz.main()

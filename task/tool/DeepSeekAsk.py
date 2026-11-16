@@ -1,4 +1,3 @@
-import random
 import re
 
 from task.tool import color
@@ -51,7 +50,7 @@ def DeepSeekAsk(API_KEY, title ,_type):
         message = {"role": "user", "content": prompt}
         client = OpenAI(api_key=API_KEY, base_url="https://api.deepseek.com")
         response = client.chat.completions.create(
-            model=random.choice(['deepseek-v4-flash','deepseek-v4-pro']),
+            model='deepseek-flash',
             messages=[message],
             temperature=1.3,
             stream=False

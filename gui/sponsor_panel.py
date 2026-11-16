@@ -64,7 +64,7 @@ class SponsorPanel:
         self.copy_btn.pack(side="left")
 
         self.tip = ctk.CTkLabel(self.parent,
-                                text="⚠️ 打赏后请发送邮件告知作者，以便获取API密钥",
+                                text="⚠️ 不想打赏也可以在github中为该项目点上star，支持我继续开发",
                                 font=ctk.CTkFont(size=11), fg_color='transparent', text_color="gray")
         self.tip.grid(row=6, column=0, columnspan=2, padx=20, pady=(5, 20), sticky=tk.W)
 

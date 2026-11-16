@@ -1,11 +1,11 @@
 """用户须知弹窗"""
 import tkinter as tk
+import webbrowser
 
 NOTICE_TEXT = """欢迎使用学习通刷课程序！
     【重要声明】
-    1. 本人从未建过QQ群，也没在B站上发布过任何视频，如果你是在这两个
-    平台上下载的脚本，请尽快删除，以避免电脑中病毒，下载正版请联系
-    邮箱2022865286@qq.com。
+    1. 本人从未建过QQ群，如果你是在QQ群中下载的脚本，请尽快删除，
+    以避免电脑中病毒，下载正版请联系邮箱2022865286@qq.com。
     2. 本软件仅供个人学习交流使用，不得用于任何商业用途。
     3. 使用本软件产生的任何后果由使用者自行承担，开发者不承担任何责任。
     4. 请遵守学校相关规定，合理使用本软件辅助学习。
@@ -72,6 +72,11 @@ class UserNotice:
 
     def _confirm(self, window):
         window.destroy()
+        """询问是否进入官网教程"""
+        if tk.messagebox.askyesno("提示", "是否进入教程了解使用方法？"):
+            webbrowser.open('https://mortal004.github.io/xuexitong-tutorial/')
+        else:
+            tk.messagebox.showinfo("提示", "脚本左下角有教程按钮，点击即可进入官网教程")
         self.on_confirm()
 
     def _cancel(self, window):

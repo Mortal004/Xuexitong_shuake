@@ -1,7 +1,6 @@
 from selenium.webdriver.common.by import By
 from task.tool import color
 import time
-import ast
 import json
 
 class Common:
@@ -79,8 +78,8 @@ def turn_page(driver,page_name):
             return True
     return False
 def save_record(driver, course_name, time, iframe, typ):
-    save_process(course_name)
     if typ!='测验':
+        save_process(course_name)
         try:
             driver.switch_to.default_content()
             element = driver.find_element(By.CLASS_NAME, 'prev_title')
@@ -106,4 +105,3 @@ def save_process(course_name,done=0,total=0):
             print(color.green(f'已保存进度：{done}/{total}'), flush=True)
         with open('task/tool/course_process.json', 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
-

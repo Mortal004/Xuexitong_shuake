@@ -38,12 +38,12 @@ class do_work(Answer):
         homework_list = element.find_elements(By.TAG_NAME, 'li')
         print(color.green(f'已检测到{len(homework_list)}个作业'), flush=True)
         for i in range(len(homework_list)):
-            if i != 0:
-                self.turn_page(self.driver, self.course_name)
-                self.driver.switch_to.frame(self.driver.find_element(By.TAG_NAME, 'iframe'))
             homework = homework_list[i]
             # 获取作业名称
-            homework_name = homework.get_attribute('aria-label')
+            try:
+                homework_name = homework.get_attribute('aria-label')
+            except:
+                homework_name=''
             print(color.green(f'开始处理第{i + 1}个作业：{homework_name}'), flush=True)
             # 点击作业
             homework.click()
@@ -52,7 +52,8 @@ class do_work(Answer):
             print(color.green(f'已完成第{i + 1}个作业'), flush=True)
             time.sleep(1)
             self.driver.close()
-
+            self.turn_page(self.driver, self.course_name)
+            self.driver.switch_to.frame(self.driver.find_element(By.TAG_NAME, 'iframe'))
 
     def get_answer_list(self):
         self.no_answer_dit = {}

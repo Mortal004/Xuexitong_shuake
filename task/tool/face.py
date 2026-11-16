@@ -10,7 +10,6 @@ from selenium.webdriver.support import expected_conditions as EC
 import numpy as np
 import requests
 from PIL import Image
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 
@@ -588,16 +587,17 @@ def delete_face_popup(driver,pass_face,class_name='maskDiv1 chapterVideoFaceQrMa
                     face_url = data.get(class_name, '')
                 check_face(driver, face_url, course_name=class_name)
                 check_face(driver, face_url, face_class='maskDiv', course_name=class_name)
-            print(color.green('开始强制删除人脸弹窗'), flush=True)
-            try:
-                # 等待弹窗容器出现（最长等待10秒）
-                popup = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, f"[class='{class_name}']"))
-                )
-                # 隐藏弹窗
-                # driver.execute_script("arguments[0].style.display='none';", popup)
-                driver.execute_script("arguments[0].remove();", popup)
-                print(color.green('成功删除人脸弹窗'),flush=True)
-            except Exception as e:
-                pass
-            delete_face_popup(driver,pass_face,'maskDiv1 starttippop faceRecognition_1 chapterVideoFaceMaskDiv')
+            else:
+                print(color.green('开始强制删除人脸弹窗'), flush=True)
+                try:
+                    # 等待弹窗容器出现（最长等待10秒）
+                    popup = WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, f"[class='{class_name}']"))
+                    )
+                    # 隐藏弹窗
+                    # driver.execute_script("arguments[0].style.display='none';", popup)
+                    driver.execute_script("arguments[0].remove();", popup)
+                    print(color.green('成功删除人脸弹窗'),flush=True)
+                except Exception as e:
+                    pass
+                delete_face_popup(driver,pass_face,'maskDiv1 starttippop faceRecognition_1 chapterVideoFaceMaskDiv')

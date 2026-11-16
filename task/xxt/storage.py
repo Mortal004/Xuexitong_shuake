@@ -166,6 +166,7 @@ def _safe_insert(sign_text, line):
 
 def log(message: str, sign_text=None) -> None:
     line = message.strip()
+    # print(line)
     if sign_text is not None:
         sign_text.after(0, _safe_insert, sign_text, line)
     try:

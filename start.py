@@ -8,6 +8,7 @@
 import json
 import signal
 import time
+import webbrowser
 from datetime import datetime, timedelta
 import re
 import threading
@@ -20,7 +21,6 @@ import os
 import customtkinter as ctk
 import pickle
 import logging
-
 from gui.sponsor_panel import SponsorPanel
 from core.config_manager import ConfigManager
 from gui.user_notice import UserNotice
@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 class Start:
     def __init__(self):
+
         self.announcement =("注意：该脚本不可用作商用、引流,使用该脚本产生的任何后果由使用者"
                                                  "自行承担,开发者不承担任何责任; 没有QQ群，谨防上当受骗")
         self.lab_lst = []
@@ -149,12 +150,12 @@ class Start:
                                               command=self.change_appearance_mode_event)
         self.change_theme.grid(row=11, column=0,pady=3,sticky="s")
         self.change_theme_value = self.change_theme.get()
-        # self.feedback_button = ctk.CTkButton(self.navigation_frame, text="💬 我要验牌",
-        #                                      font=self.font,width=10,text_color='black',
-        #                                      fg_color=self.button_hover_color,
-        #                                      hover_color=self.button_color,
-        #                                      command=self._show_feedback_popup)
-        # self.feedback_button.grid(row=10, column=0, pady=(20, 2),sticky="s")
+        self.tutorial = ctk.CTkButton(self.navigation_frame, text="💬 官网教程",
+                                             font=self.font,width=10,text_color='black',
+                                             fg_color=self.button_hover_color,
+                                             hover_color=self.button_color,
+                                             command=self.turn_xuexitong_tutorial)
+        self.tutorial.grid(row=10, column=0, pady=(20, 2),sticky="s")
         # ----------------标签页----------------
         self.label_frame = ctk.CTkFrame(self.root, fg_color=self.frame_fg_color, corner_radius=0)
         self.label_frame.grid(row=0, column=1, sticky='nsew')
@@ -297,7 +298,7 @@ class Start:
         ]
         self.combobox_lst.extend(self.settings_panel.comboboxes)
         self.check_switch = list(self.settings_panel.switches)
-        self.button_name_list1 = [self.start_button, self.auto_sign, self.close_button, self.update_button,
+        self.button_name_list1 = [self.start_button, self.auto_sign, self.close_button, self.update_button,self.tutorial,
                                   self.find_button1, self.find_button2, self.delete_button1, self.delete_button2]
         self.button_name_list1.extend(self.settings_panel.buttons)
 
@@ -333,6 +334,9 @@ class Start:
                                  f"请勿关闭此窗口，否则定时刷课将无法正常开启")
         self.hint_label.configure(text=self.hint_txt)
 
+    def turn_xuexitong_tutorial(self):
+        """打开浏览器跳转官网教程"""
+        webbrowser.open('https://mortal004.github.io/xuexitong-tutorial/')
 
     # ========== 委托方法（供子模块回调） ==========
 
@@ -437,8 +441,7 @@ class Start:
         if self.check_info():
             SignWindow(self.root, self.account_info, self.font,self.auto_sign,
                    self.button_color, self.button_hover_color)
-        # tk.messagebox.showinfo('提示', '自动签到功能已下架，如有需要请联系作者邮箱2022865286@qq.com')
-        # self._show_feedback_popup()
+
     def show_frame(self, frame):
         for f in self.frame_name_list[:8]:
             if f != frame:
@@ -612,6 +615,9 @@ class Start:
         return True
 
     def start(self):
+        if datetime.now().hour < 6:
+            if not tk.messagebox.askyesno('是否继续刷课', message='晚上24点到早上6点之间刷课被学习通检测的概率极高，不建议继续刷课'):
+                return
         if self.check_info():
             self.process_condition = True
             self.all_cour=self.account_info['cour']
@@ -632,11 +638,26 @@ class Start:
             self.run_program(self.file_name, self.text_box_lst[i])
             # time.sleep(3)
             # print(self.text_box_lst[i].get("1.0", "end"))
+            waited = 0
             while '正在登录中...' not in self.text_box_lst[i].get("1.0", "end"):
                 time.sleep(1)
+                waited += 1
+                if waited > 180:      # 启动失败时不要卡死，继续启动下一门
+                    break
             i += 1
         self.account_info['cour'] = self.all_cour
         self.config.save_account(self.account_info)
+        # 多端模式下所有课程都已启动（最后一门课也开始刷了），此时统一发"开始刷课"提醒。
+        # 子进程里 multi_device 为真时不会各自发信，避免刷屏。
+        self._notify_start_all()
+
+    def _notify_start_all(self):
+        try:
+            from task.tool.mailer import notify_start
+            task_type = self.account_info.get('task_type', '章节')
+            notify_start(self.all_cour, task_type)
+        except Exception:
+            pass
     def close(self):
         self.process_condition = False
         self.start_button.grid(row=0, column=0, padx=5, pady=10)
@@ -682,6 +703,10 @@ class Start:
                 minutes = int((time_diff % 3600) // 60)
                 seconds = int(time_diff % 60)
                 countdown_text = f" | 距离开始刷课还剩 {hours:02d}小时{minutes:02d}分钟{seconds:02d}秒"
+        else:
+            current_hour = datetime.now().hour
+            if current_hour >= 23 or current_hour < 6:
+                countdown_text = " | 已入深夜，早点休息，明天再刷课吧~"
         self.time_label.configure(text=f"当前时间: {current_time}{countdown_text}")
         self.root.after(1000, self.update_time)
         if self.timer_start_time in current_time and not self.process_condition and self.timer_active:
@@ -747,6 +772,7 @@ class Start:
         self.record_color_lst.append(theme)
         for frame in self.frame_name_list:
             frame.configure(fg_color=self.color_value_dict.get(theme)[1])
+        self.settings_panel.detail_set_frame.configure(fg_color=self.color_value_dict.get(theme)[1])
         self.navigation_frame.configure(fg_color=self.color_value_dict.get(theme)[2])
         self.style.configure('TLabelframe', background=self.color_value_dict.get(theme)[1])
         self.style.configure('TLabelframe.Label', background=self.color_value_dict.get(theme)[1])

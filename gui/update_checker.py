@@ -222,11 +222,11 @@ class UpdateChecker:
 
         cloud_drives = [
             ("⚡ 迅雷网盘", "推荐 · 支持迅雷加速下载", "#00A8FF", "#33B9FF",
-             drive_urls.get('迅雷网盘', 'https://pan.xunlei.com/s/VOvtzs6dbiSGyNE41Fk5ytgVA1?pwd=tct2#')),
+             drive_urls.get('迅雷网盘', 'https://pan.xunlei.com/s/VP5_9N46J5V-tJUBCXXpVEaLA1?pwd=9egr#')),
             ("☁️ 夸克网盘", " 下载速度快", "#FF6B35", "#FF8555",
-             drive_urls.get('夸克网盘', 'https://pan.quark.cn/s/bbcc17bcce22')),
+             drive_urls.get('夸克网盘', 'https://pan.quark.cn/s/8ff80d48d6c1')),
             ("🐻 百度网盘", "提取码: 无", "#4CD964", "#6DE07E",
-             drive_urls.get('百度网盘', 'https://pan.baidu.com/s/5TvAVKIajPhOKTGd9qWDfUw')),
+             drive_urls.get('百度网盘', 'https://pan.baidu.com/s/1sBJDAzHq6dUqwrxLsRqMtA?pwd=1234')),
         ]
         buttons_frame = ctk.CTkFrame(drive_container, fg_color="transparent")
         buttons_frame.pack(pady=(0, 12), padx=10, fill="x")
@@ -246,3 +246,4 @@ class UpdateChecker:
         self.root.clipboard_append(url)
         if window:
             window.destroy()
+        self.root.destroy()
